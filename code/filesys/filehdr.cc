@@ -1,22 +1,22 @@
 // filehdr.cc 
-//	Routines for managing the disk file header (in UNIX, this
-//	would be called the i-node).
+//  Routines for managing the disk file header (in UNIX, this
+//  would be called the i-node).
 //
-//	The file header is used to locate where on disk the 
-//	file's data is stored.  We implement this as a fixed size
-//	table of pointers -- each entry in the table points to the 
-//	disk sector containing that portion of the file data
-//	(in other words, there are no indirect or doubly indirect 
-//	blocks). The table size is chosen so that the file header
-//	will be just big enough to fit in one disk sector, 
+//  The file header is used to locate where on disk the 
+//  file's data is stored.  We implement this as a fixed size
+//  table of pointers -- each entry in the table points to the 
+//  disk sector containing that portion of the file data
+//  (in other words, there are no indirect or doubly indirect 
+//  blocks). The table size is chosen so that the file header
+//  will be just big enough to fit in one disk sector, 
 //
 //      Unlike in a real system, we do not keep track of file permissions, 
-//	ownership, last modification date, etc., in the file header. 
+//  ownership, last modification date, etc., in the file header. 
 //
-//	A file header can be initialized in two ways:
-//	   for a new file, by modifying the in-memory data structure
-//	     to point to the newly allocated data blocks
-//	   for a file already on disk, by reading the file header from disk
+//  A file header can be initialized in two ways:
+//     for a new file, by modifying the in-memory data structure
+//       to point to the newly allocated data blocks
+//     for a file already on disk, by reading the file header from disk
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
 // All rights reserved.  See copyright.h for copyright notice and limitation 
@@ -31,13 +31,13 @@
 
 //----------------------------------------------------------------------
 // FileHeader::Allocate
-// 	Initialize a fresh file header for a newly created file.
-//	Allocate data blocks for the file out of the map of free disk blocks.
-//	Return FALSE if there are not enough free blocks to accomodate
-//	the new file.
+//  Initialize a fresh file header for a newly created file.
+//  Allocate data blocks for the file out of the map of free disk blocks.
+//  Return FALSE if there are not enough free blocks to accomodate
+//  the new file.
 //
-//	"freeMap" is the bit map of free disk sectors
-//	"fileSize" is the bit map of free disk sectors
+//  "freeMap" is the bit map of free disk sectors
+//  "fileSize" is the bit map of free disk sectors
 //----------------------------------------------------------------------
 
 bool
@@ -45,39 +45,71 @@ FileHeader::Allocate(PersistentBitmap *freeMap, int fileSize)
 { 
     numBytes = fileSize;
     numSectors  = divRoundUp(fileSize, SectorSize);
+    //cout<<numSectors<<"^^^^^^"<<endl;
     if (freeMap->NumClear() < numSectors)
-	return FALSE;		// not enough space
-
-    for (int i = 0; i < numSectors; i++) {
-	dataSectors[i] = freeMap->FindAndSet();
-	// since we checked that there was enough free space,
-	// we expect this to succeed
-	ASSERT(dataSectors[i] >= 0);
+    return FALSE;       // not enough space
+    
+    int processedSector = 0;
+    if(numSectors < NumDirect){
+        for (int i = 0; i < numSectors; i++) {
+         dataSectors[i] = freeMap->FindAndSet();
+        // since we checked that there was enough free space,
+        // we expect this to succeed
+        ASSERT(dataSectors[i] >= 0);
+        }
     }
+    else {
+        //int processedSector = 0;
+        for (int i = 0; i < NumDirect; i++) {
+        dataSectors[i] = freeMap->FindAndSet();
+        // since we checked that there was enough free space,
+        // we expect this to succeed
+        ASSERT(dataSectors[i] >= 0);
+        processedSector = i;
+        }
+        //cout<<processedSector<<"&&&&&&"<<endl;
+        for(int j=0; j<NumIndirect && processedSector<numSectors; j++){
+            int indirectSector[IndirectSize];
+            int sectorForindirectIndex = freeMap->FindAndSet();
+            for(int k=0; k<IndirectSize && processedSector<numSectors; k++){
+                indirectSector[k] = freeMap->FindAndSet();
+                processedSector++;
+            }
+            //cout<<processedSector<<" "<<numSectors<<"******"<<endl;
+            kernel->synchDisk->WriteSector(sectorForindirectIndex, (char *)indirectSector);
+            UsedIndirectSector[numOfIndirectSector] = sectorForindirectIndex;
+            cout<<"allocated sector"<<UsedIndirectSector[numOfIndirectSector]<<" at position "<<numOfIndirectSector<<endl;
+            numOfIndirectSector++;
+
+        }
+    }
+    //cout<<processedSector<<"&&&&&&"<<endl;
+    
+
     return TRUE;
 }
 
 //----------------------------------------------------------------------
 // FileHeader::Deallocate
-// 	De-allocate all the space allocated for data blocks for this file.
+//  De-allocate all the space allocated for data blocks for this file.
 //
-//	"freeMap" is the bit map of free disk sectors
+//  "freeMap" is the bit map of free disk sectors
 //----------------------------------------------------------------------
 
 void 
 FileHeader::Deallocate(PersistentBitmap *freeMap)
 {
     for (int i = 0; i < numSectors; i++) {
-	ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
-	freeMap->Clear((int) dataSectors[i]);
+    ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+    freeMap->Clear((int) dataSectors[i]);
     }
 }
 
 //----------------------------------------------------------------------
 // FileHeader::FetchFrom
-// 	Fetch contents of file header from disk. 
+//  Fetch contents of file header from disk. 
 //
-//	"sector" is the disk sector containing the file header
+//  "sector" is the disk sector containing the file header
 //----------------------------------------------------------------------
 
 void
@@ -88,9 +120,9 @@ FileHeader::FetchFrom(int sector)
 
 //----------------------------------------------------------------------
 // FileHeader::WriteBack
-// 	Write the modified contents of the file header back to disk. 
+//  Write the modified contents of the file header back to disk. 
 //
-//	"sector" is the disk sector to contain the file header
+//  "sector" is the disk sector to contain the file header
 //----------------------------------------------------------------------
 
 void
@@ -101,23 +133,42 @@ FileHeader::WriteBack(int sector)
 
 //----------------------------------------------------------------------
 // FileHeader::ByteToSector
-// 	Return which disk sector is storing a particular byte within the file.
+//  Return which disk sector is storing a particular byte within the file.
 //      This is essentially a translation from a virtual address (the
-//	offset in the file) to a physical address (the sector where the
-//	data at the offset is stored).
+//  offset in the file) to a physical address (the sector where the
+//  data at the offset is stored).
 //
-//	"offset" is the location within the file of the byte in question
+//  "offset" is the location within the file of the byte in question
 //----------------------------------------------------------------------
 
 int
 FileHeader::ByteToSector(int offset)
 {
-    return(dataSectors[offset / SectorSize]);
+    //return(dataSectors[offset / SectorSize]);
+    int sectorOffset = offset/SectorSize;
+    //cout<<sectorOffset<<"!!!!!"<<endl;
+
+    if(sectorOffset < NumDirect) return(dataSectors[sectorOffset]); 
+    else{
+        int leftSectors = sectorOffset - NumDirect;
+        // cout<<leftSectors<<"*****"<<endl;
+        int index = (leftSectors-1)/32;
+
+        char *temp = new char[SectorSize];
+        cout<<UsedIndirectSector[index]<<" at position "<<index<<endl;
+        kernel->synchDisk->ReadSector(36, temp);
+        int *sector = (int *)temp;
+        int indexOffset = sectorOffset - NumDirect - index*32 - 1;
+        
+        int result = sector[indexOffset];
+
+        return result;
+    }
 }
 
 //----------------------------------------------------------------------
 // FileHeader::FileLength
-// 	Return the number of bytes in the file.
+//  Return the number of bytes in the file.
 //----------------------------------------------------------------------
 
 int
@@ -126,10 +177,51 @@ FileHeader::FileLength()
     return numBytes;
 }
 
+
+bool FileHeader::extendFileSize(PersistentBitmap *freeMap, int fileSize){
+
+    int extraSectors = divRoundUp(fileSize, SectorSize);
+    int originalSize = FileLength();
+    int originalSector = divRoundUp(originalSize, SectorSize);
+
+    //cout<<"hahahaha"<<endl;
+
+    //there is no enough free sector
+    if (freeMap->NumClear() < extraSectors)
+        return FALSE;       // not enough space
+
+    //there is no enough sector
+    if(originalSector + extraSectors > NumDirect+NumIndirect*IndirectSize) 
+        return FALSE;
+
+    int processedSector = 0;
+    for(int i=numSectors; i<NumDirect; i++){
+        if(dataSectors[i] == -1) {
+            dataSectors[i] = freeMap->FindAndSet();
+            processedSector++;
+        }
+    }
+
+    for(int j=0; j<NumIndirect && processedSector<extraSectors; j++){
+        int indirectSector[IndirectSize];
+        int sectorForindirectIndex = freeMap->FindAndSet();
+        for(int k=0; k<IndirectSize && processedSector<extraSectors; k++){
+            indirectSector[k] = freeMap->FindAndSet();
+            processedSector++;
+        }
+        //cout<<processedSector<<" "<<numSectors<<"******"<<endl;
+        kernel->synchDisk->WriteSector(sectorForindirectIndex, (char *)indirectSector);
+        UsedIndirectSector[numOfIndirectSector] = sectorForindirectIndex;
+        numOfIndirectSector++;
+    }
+
+    return TRUE;
+}
+
 //----------------------------------------------------------------------
 // FileHeader::Print
-// 	Print the contents of the file header, and the contents of all
-//	the data blocks pointed to by the file header.
+//  Print the contents of the file header, and the contents of all
+//  the data blocks pointed to by the file header.
 //----------------------------------------------------------------------
 
 void
@@ -140,16 +232,16 @@ FileHeader::Print()
 
     printf("FileHeader contents.  File size: %d.  File blocks:\n", numBytes);
     for (i = 0; i < numSectors; i++)
-	printf("%d ", dataSectors[i]);
+    printf("%d ", dataSectors[i]);
     printf("\nFile contents:\n");
     for (i = k = 0; i < numSectors; i++) {
-	kernel->synchDisk->ReadSector(dataSectors[i], data);
+    kernel->synchDisk->ReadSector(dataSectors[i], data);
         for (j = 0; (j < SectorSize) && (k < numBytes); j++, k++) {
-	    if ('\040' <= data[j] && data[j] <= '\176')   // isprint(data[j])
-		printf("%c", data[j]);
+        if ('\040' <= data[j] && data[j] <= '\176')   // isprint(data[j])
+        printf("%c", data[j]);
             else
-		printf("\\%x", (unsigned char)data[j]);
-	}
+        printf("\\%x", (unsigned char)data[j]);
+    }
         printf("\n"); 
     }
     delete [] data;

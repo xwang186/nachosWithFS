@@ -1,9 +1,9 @@
 // filehdr.h 
-//	Data structures for managing a disk file header.  
+//  Data structures for managing a disk file header.  
 //
-//	A file header describes where on disk to find the data in a file,
-//	along with other information about the file (for instance, its
-//	length, owner, etc.)
+//  A file header describes where on disk to find the data in a file,
+//  along with other information about the file (for instance, its
+//  length, owner, etc.)
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
 // All rights reserved.  See copyright.h for copyright notice and limitation 
@@ -17,8 +17,13 @@
 #include "disk.h"
 #include "pbitmap.h"
 
-#define NumDirect 	((SectorSize - 2 * sizeof(int)) / sizeof(int))
-#define MaxFileSize 	(NumDirect * SectorSize)
+#define NumIndirect 32
+#define IndirectSize 32
+#define NumDirect   ((SectorSize - 2 * sizeof(int)) / sizeof(int))
+#define MaxFileSize     (NumDirect * SectorSize + IndirectSize * NumIndirect * SectorSize)
+
+// #define NumDirect    ((SectorSize - 2 * sizeof(int)) / sizeof(int))
+// #define MaxFileSize  (NumDirect * SectorSize)
 
 // The following class defines the Nachos "file header" (in UNIX terms,  
 // the "i-node"), describing where on disk to find all of the data in the file.
@@ -38,29 +43,33 @@
 class FileHeader {
   public:
     bool Allocate(PersistentBitmap *bitMap, int fileSize);// Initialize a file header, 
-						//  including allocating space 
-						//  on disk for the file data
+                        //  including allocating space 
+                        //  on disk for the file data
     void Deallocate(PersistentBitmap *bitMap);  // De-allocate this file's 
-						//  data blocks
+                        //  data blocks
 
-    void FetchFrom(int sectorNumber); 	// Initialize file header from disk
-    void WriteBack(int sectorNumber); 	// Write modifications to file header
-					//  back to disk
+    void FetchFrom(int sectorNumber);   // Initialize file header from disk
+    void WriteBack(int sectorNumber);   // Write modifications to file header
+                    //  back to disk
 
-    int ByteToSector(int offset);	// Convert a byte offset into the file
-					// to the disk sector containing
-					// the byte
+    int ByteToSector(int offset);   // Convert a byte offset into the file
+                    // to the disk sector containing
+                    // the byte
 
-    int FileLength();			// Return the length of the file 
-					// in bytes
+    int FileLength();           // Return the length of the file 
+                    // in bytes
 
-    void Print();			// Print the contents of the file.
+    bool extendFileSize(PersistentBitmap *bitMap, int fileSize);
+
+    void Print();           // Print the contents of the file.
 
   private:
-    int numBytes;			// Number of bytes in the file
-    int numSectors;			// Number of data sectors in the file
-    int dataSectors[NumDirect];		// Disk sector numbers for each data 
-					// block in the file
+    int numBytes;           // Number of bytes in the file
+    int numSectors;         // Number of data sectors in the file
+    int dataSectors[NumDirect];     // Disk sector numbers for each data 
+                    // block in the file
+    int numOfIndirectSector;
+    int UsedIndirectSector[NumIndirect];
 };
 
 #endif // FILEHDR_H

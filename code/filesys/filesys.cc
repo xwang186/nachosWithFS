@@ -51,6 +51,8 @@
 #include "directory.h"
 #include "filehdr.h"
 #include "filesys.h"
+#include "main.h"
+#include "filemanager.h"
 
 // Sectors containing the file headers for the bitmap of free sectors,
 // and the directory of files.  These file headers are placed in well-known 
@@ -204,6 +206,7 @@ FileSystem::Create(char *name, int initialSize)
     	    	hdr->WriteBack(sector); 		
     	    	directory->WriteBack(directoryFile);
     	    	freeMap->WriteBack(freeMapFile);
+                kernel->filemanager->AddNewFile(name);
 	    }
             delete hdr;
 	}

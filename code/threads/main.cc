@@ -45,6 +45,7 @@
 #include "filesys.h"
 #include "openfile.h"
 #include "sysdep.h"
+#include "filemanager.h"
 
 // global variables
 Kernel *kernel;

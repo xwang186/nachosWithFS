@@ -170,7 +170,6 @@ Lock::~Lock()
 {
     delete semaphore;
 }
-
 //----------------------------------------------------------------------
 // Lock::Acquire
 //	Atomically wait until the lock is free, then set it to busy.
