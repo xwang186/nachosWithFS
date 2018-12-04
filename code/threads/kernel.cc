@@ -1,5 +1,5 @@
 // kernel.cc 
-//	Initialization and cleanup routines for the Nachos kernel.
+//  Initialization and cleanup routines for the Nachos kernel.
 //
 // Copyright (c) 1992-1996 The Regents of the University of California.
 // All rights reserved.  See copyright.h for copyright notice and limitation 
@@ -17,11 +17,11 @@
 #include "synchconsole.h"
 #include "synchdisk.h"
 #include "post.h"
-
+#include "filemanager.h"
 //----------------------------------------------------------------------
 // Kernel::Kernel
-// 	Interpret command line arguments in order to determine flags 
-//	for the initialization (see also comments in main.cc)  
+//  Interpret command line arguments in order to determine flags 
+//  for the initialization (see also comments in main.cc)  
 //----------------------------------------------------------------------
 
 Kernel::Kernel(int argc, char **argv)
@@ -31,31 +31,31 @@ Kernel::Kernel(int argc, char **argv)
     consoleIn = NULL;          // default is stdin
     consoleOut = NULL;         // default is stdout
 #ifndef FILESYS_STUB
-    formatFlag = FALSE;
+    formatFlag = TRUE;
 #endif
     reliability = 1;            // network reliability, default is 1.0
     hostName = 0;               // machine id, also UNIX socket name
                                 // 0 is the default machine id
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-rs") == 0) {
- 	    ASSERT(i + 1 < argc);
-	    RandomInit(atoi(argv[i + 1]));// initialize pseudo-random
-					// number generator
-	    randomSlice = TRUE;
-	    i++;
+        ASSERT(i + 1 < argc);
+        RandomInit(atoi(argv[i + 1]));// initialize pseudo-random
+                    // number generator
+        randomSlice = TRUE;
+        i++;
         } else if (strcmp(argv[i], "-s") == 0) {
             debugUserProg = TRUE;
-	} else if (strcmp(argv[i], "-ci") == 0) {
-	    ASSERT(i + 1 < argc);
-	    consoleIn = argv[i + 1];
-	    i++;
-	} else if (strcmp(argv[i], "-co") == 0) {
-	    ASSERT(i + 1 < argc);
-	    consoleOut = argv[i + 1];
-	    i++;
+    } else if (strcmp(argv[i], "-ci") == 0) {
+        ASSERT(i + 1 < argc);
+        consoleIn = argv[i + 1];
+        i++;
+    } else if (strcmp(argv[i], "-co") == 0) {
+        ASSERT(i + 1 < argc);
+        consoleOut = argv[i + 1];
+        i++;
 #ifndef FILESYS_STUB
-	} else if (strcmp(argv[i], "-f") == 0) {
-	    formatFlag = TRUE;
+    } else if (strcmp(argv[i], "-f") == 0) {
+        formatFlag = TRUE;
 #endif
         } else if (strcmp(argv[i], "-n") == 0) {
             ASSERT(i + 1 < argc);   // next argument is float
@@ -67,21 +67,21 @@ Kernel::Kernel(int argc, char **argv)
             i++;
         } else if (strcmp(argv[i], "-u") == 0) {
             cout << "Partial usage: nachos [-rs randomSeed]\n";
-	    cout << "Partial usage: nachos [-s]\n";
+        cout << "Partial usage: nachos [-s]\n";
             cout << "Partial usage: nachos [-ci consoleIn] [-co consoleOut]\n";
 #ifndef FILESYS_STUB
-	    cout << "Partial usage: nachos [-nf]\n";
+        cout << "Partial usage: nachos [-nf]\n";
 #endif
             cout << "Partial usage: nachos [-n #] [-m #]\n";
-	}
+    }
     }
 }
 
 //----------------------------------------------------------------------
 // Kernel::Initialize
-// 	Initialize Nachos global data structures.  Separate from the 
-//	constructor because some of these refer to earlier initialized
-//	data via the "kernel" global variable.
+//  Initialize Nachos global data structures.  Separate from the 
+//  constructor because some of these refer to earlier initialized
+//  data via the "kernel" global variable.
 //----------------------------------------------------------------------
 
 void
@@ -90,17 +90,18 @@ Kernel::Initialize()
     // We didn't explicitly allocate the current thread we are running in.
     // But if it ever tries to give up the CPU, we better have a Thread
     // object to save its state. 
-    currentThread = new Thread("main");		
+    currentThread = new Thread("main");     
     currentThread->setStatus(RUNNING);
 
-    stats = new Statistics();		// collect statistics
-    interrupt = new Interrupt;		// start up interrupt handling
-    scheduler = new Scheduler();	// initialize the ready queue
-    alarm = new Alarm(randomSlice);	// start up time slicing
+    stats = new Statistics();       // collect statistics
+    interrupt = new Interrupt;      // start up interrupt handling
+    scheduler = new Scheduler();    // initialize the ready queue
+    alarm = new Alarm(randomSlice); // start up time slicing
     machine = new Machine(debugUserProg);
     synchConsoleIn = new SynchConsoleInput(consoleIn); // input from stdin
     synchConsoleOut = new SynchConsoleOutput(consoleOut); // output to stdout
     synchDisk = new SynchDisk();    //
+    filemanager =new FileManager();
 #ifdef FILESYS_STUB
     fileSystem = new FileSystem();
 #else
@@ -114,7 +115,7 @@ Kernel::Initialize()
 
 //----------------------------------------------------------------------
 // Kernel::~Kernel
-// 	Nachos is halting.  De-allocate global data structures.
+//  Nachos is halting.  De-allocate global data structures.
 //----------------------------------------------------------------------
 
 Kernel::~Kernel()
@@ -144,16 +145,16 @@ Kernel::ThreadSelfTest() {
    Semaphore *semaphore;
    SynchList<int> *synchList;
    
-   LibSelfTest();		// test library routines
-   currentThread->SelfTest();	// test thread switching
+   LibSelfTest();       // test library routines
+   currentThread->SelfTest();   // test thread switching
    
-   				// test semaphore operation
+                // test semaphore operation
    semaphore = new Semaphore("test", 0);
    semaphore->SelfTest();
    delete semaphore;
    
-   				// test locks, condition variables
-				// using synchronized lists
+                // test locks, condition variables
+                // using synchronized lists
    synchList = new SynchList<int>;
    synchList->SelfTest(9);
    delete synchList;
@@ -233,7 +234,7 @@ Kernel::NetworkTest() {
         postOfficeOut->Send(outPktHdr, outMailHdr, ack); 
 
         // Wait for the ack from the other machine to the first message we sent
-	postOfficeIn->Receive(1, &inPktHdr, &inMailHdr, buffer);
+    postOfficeIn->Receive(1, &inPktHdr, &inMailHdr, buffer);
         cout << "Got: " << buffer << " : from " << inPktHdr.from << ", box " 
                                                 << inMailHdr.from << "\n";
         cout.flush();

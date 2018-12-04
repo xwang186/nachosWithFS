@@ -51,6 +51,8 @@
 #include "directory.h"
 #include "filehdr.h"
 #include "filesys.h"
+#include "main.h"
+#include "filemanager.h"
 
 // Sectors containing the file headers for the bitmap of free sectors,
 // and the directory of files.  These file headers are placed in well-known 
@@ -81,7 +83,7 @@
 FileSystem::FileSystem(bool format)
 { 
     DEBUG(dbgFile, "Initializing the file system.");
-    if (format) {
+    if (true) {
         PersistentBitmap *freeMap = new PersistentBitmap(NumSectors);
         Directory *directory = new Directory(NumDirEntries);
 	FileHeader *mapHdr = new FileHeader;
@@ -204,11 +206,13 @@ FileSystem::Create(char *name, int initialSize)
     	    	hdr->WriteBack(sector); 		
     	    	directory->WriteBack(directoryFile);
     	    	freeMap->WriteBack(freeMapFile);
+                kernel->filemanager->AddNewFile(name);
 	    }
             delete hdr;
 	}
         delete freeMap;
     }
+    cout<<success<<endl;
     delete directory;
     return success;
 }
@@ -236,6 +240,8 @@ FileSystem::Open(char *name)
     if (sector >= 0) 		
 	openFile = new OpenFile(sector);	// name was found in directory 
     delete directory;
+
+    //cout<<sector<<endl;
     return openFile;				// return NULL if not found
 }
 
@@ -298,6 +304,21 @@ FileSystem::List()
     directory->FetchFrom(directoryFile);
     directory->List();
     delete directory;
+}
+
+
+bool FileSystem::extend(OpenFile *file, int numBytes){
+
+    //Directory *directory;
+    PersistentBitmap *freeMap = new PersistentBitmap(freeMapFile,NumSectors);
+
+    FileHeader *fileHdr = file->hdr;
+
+    bool result = fileHdr->extendFileSize(freeMap, numBytes);
+
+    if(result) freeMap->WriteBack(freeMapFile);
+
+    return result;
 }
 
 //----------------------------------------------------------------------

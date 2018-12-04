@@ -43,17 +43,54 @@
 bool
 FileHeader::Allocate(PersistentBitmap *freeMap, int fileSize)
 { 
+    order = kernel->orderNum++;
+    //cout<<order<<"+++"<<endl;
     numBytes = fileSize;
     numSectors  = divRoundUp(fileSize, SectorSize);
+    //cout<<numSectors<<"^^^^^^"<<endl;
     if (freeMap->NumClear() < numSectors)
 	return FALSE;		// not enough space
-
-    for (int i = 0; i < numSectors; i++) {
-	dataSectors[i] = freeMap->FindAndSet();
-	// since we checked that there was enough free space,
-	// we expect this to succeed
-	ASSERT(dataSectors[i] >= 0);
+    
+    int processedSector = 0;
+    if(numSectors < NumDirect){
+        for (int i = 0; i < numSectors; i++) {
+        dataSectors[i] = freeMap->FindAndSet();
+        // since we checked that there was enough free space,
+        // we expect this to succeed
+        ASSERT(dataSectors[i] >= 0);
+        }
     }
+    else {
+        //int processedSector = 0;
+        for (int i = 0; i < NumDirect; i++) {
+        dataSectors[i] = freeMap->FindAndSet();
+        // since we checked that there was enough free space,
+        // we expect this to succeed
+        ASSERT(dataSectors[i] >= 0);
+        processedSector = i;
+        }
+        //cout<<processedSector<<"&&&&&&"<<endl;
+        for(int j=0; j<NumIndirect && processedSector<numSectors; j++){
+            int indirectSector[IndirectSize];
+            int sectorForindirectIndex = freeMap->FindAndSet();
+            // cout<<"--------------------"<<endl;
+            //cout<<"allocated sector "<<sectorForindirectIndex<<" at position "<<numOfIndirectSector<<endl;
+            for(int k=0; k<IndirectSize && processedSector<numSectors; k++){
+                indirectSector[k] = freeMap->FindAndSet();
+                //cout<<indirectSector[k]<<" get sector"<<endl;
+                processedSector++;
+            }
+            //cout<<"--------------------"<<endl;
+            //cout<<processedSector<<" "<<numSectors<<"******"<<endl;
+            kernel->synchDisk->WriteSector(sectorForindirectIndex, (char *)indirectSector);
+            kernel->fileEntry[order].UsedIndirectSector[++numOfIndirectSector] = sectorForindirectIndex;
+            //numOfIndirectSector++;
+
+        }
+    }
+    //cout<<processedSector<<"&&&&&&"<<endl;
+    
+
     return TRUE;
 }
 
@@ -68,8 +105,17 @@ void
 FileHeader::Deallocate(PersistentBitmap *freeMap)
 {
     for (int i = 0; i < numSectors; i++) {
-	ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
-	freeMap->Clear((int) dataSectors[i]);
+    	//ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+    	freeMap->Clear((int) dataSectors[i]);
+    }
+
+    for(int i=0; i<1; i++){
+        char *temp = new char[SectorSize];
+        kernel->synchDisk->ReadSector(kernel->fileEntry[order].UsedIndirectSector[i], temp);
+        int *sector = (int *)temp;
+        for(int j=0; j<IndirectSize; j++){
+            freeMap->Clear((int) sector[j]);
+        }
     }
 }
 
@@ -112,7 +158,26 @@ FileHeader::WriteBack(int sector)
 int
 FileHeader::ByteToSector(int offset)
 {
-    return(dataSectors[offset / SectorSize]);
+    //return(dataSectors[offset / SectorSize]);
+    int sectorOffset = offset / SectorSize;
+    //cout<<sectorOffset<<"!!!!!"<<endl;
+    //cout<<order<<"+++"<<numOfIndirectSector<<endl;
+    if(sectorOffset < NumDirect) return(dataSectors[sectorOffset]); 
+    else{
+        int remainingSectors = sectorOffset - NumDirect;
+        // cout<<leftSectors<<"*****"<<endl;
+        int indirectIndex = (remainingSectors-1)/32;
+
+        char *temp = new char[SectorSize];
+        //cout<<numOfIndirectSector<<"hahahahaha"<<endl;
+        cout<<kernel->fileEntry[order].UsedIndirectSector[indirectIndex]<<" at position "<<indirectIndex<<endl;
+        kernel->synchDisk->ReadSector(kernel->fileEntry[order].UsedIndirectSector[indirectIndex], temp);
+        int *sector = (int *)temp;
+        int indexOffset = sectorOffset - NumDirect - indirectIndex*32 - 1;
+        
+        //cout<<sector[indexOffset]<<"~~~~~~"<<endl;
+        return sector[indexOffset];
+    }
 }
 
 //----------------------------------------------------------------------
@@ -124,6 +189,51 @@ int
 FileHeader::FileLength()
 {
     return numBytes;
+}
+
+
+bool FileHeader::extendFileSize(PersistentBitmap *freeMap, int fileSize){
+
+    int extraSectors = divRoundUp(fileSize, SectorSize);
+    int originalSize = FileLength();
+    int originalSector = divRoundUp(originalSize, SectorSize);
+    if(order == -1) order = kernel->orderNum++;
+    //cout<<"hahahaha"<<endl;
+
+    //there is no enough free sector
+    if (freeMap->NumClear() < extraSectors)
+        return FALSE;       // not enough space
+
+    //there is no enough sector
+    if(originalSector + extraSectors > NumDirect+NumIndirect*IndirectSize) 
+        return FALSE;
+
+    int processedSector = 0;
+    for(int i=numSectors; i<NumDirect; i++){
+        //if(dataSectors[i] == -1) {
+            dataSectors[i] = freeMap->FindAndSet();
+            processedSector++;
+        //}
+    }
+
+    for(int j=0; j<NumIndirect && processedSector<extraSectors; j++){
+        int indirectSector[IndirectSize];
+        int sectorForindirectIndex = freeMap->FindAndSet();
+        // cout<<"--------------------"<<endl;
+        // cout<<"allocated sector "<<sectorForindirectIndex<<" at position "<<numOfIndirectSector<<endl;
+        for(int k=0; k<IndirectSize && processedSector<extraSectors; k++){
+            indirectSector[k] = freeMap->FindAndSet();
+            // cout<<indirectSector[k]<<" get sector"<<endl;
+            processedSector++;
+        }
+        // cout<<"--------------------"<<endl;
+        //cout<<processedSector<<" "<<numSectors<<"******"<<endl;
+        kernel->synchDisk->WriteSector(sectorForindirectIndex, (char *)indirectSector);
+        kernel->fileEntry[order].UsedIndirectSector[numOfIndirectSector] = sectorForindirectIndex;
+        numOfIndirectSector++;
+    }
+
+    return TRUE;
 }
 
 //----------------------------------------------------------------------

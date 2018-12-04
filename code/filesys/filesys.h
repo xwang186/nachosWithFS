@@ -84,6 +84,8 @@ class FileSystem {
 
     void Print();			// List all the files and their contents
 
+    bool extend(OpenFile *file, int numBytes);
+
   private:
    OpenFile* freeMapFile;		// Bit map of free disk blocks,
 					// represented as a file

@@ -1,5 +1,5 @@
 // kernel.h
-//	Global variables for the Nachos kernel.
+//  Global variables for the Nachos kernel.
 //
 // Copyright (c) 1992-1996 The Regents of the University of California.
 // All rights reserved.  See copyright.h for copyright notice and limitation 
@@ -19,23 +19,32 @@
 #include "filesys.h"
 #include "machine.h"
 
+
+
+
 class PostOfficeInput;
 class PostOfficeOutput;
 class SynchConsoleInput;
 class SynchConsoleOutput;
 class SynchDisk;
+class FileManager;
+
+class fildHeaderEntry{
+    public:
+        int UsedIndirectSector[32];
+};
 
 class Kernel {
   public:
     Kernel(int argc, char **argv);
-    				// Interpret command line arguments
-    ~Kernel();		        // deallocate the kernel
+                    // Interpret command line arguments
+    ~Kernel();              // deallocate the kernel
     
-    void Initialize(); 		// initialize the kernel -- separated
-				// from constructor because 
-				// refers to "kernel" as a global
+    void Initialize();      // initialize the kernel -- separated
+                // from constructor because 
+                // refers to "kernel" as a global
 
-    void ThreadSelfTest();	// self test of threads and synchronization
+    void ThreadSelfTest();  // self test of threads and synchronization
 
     void ConsoleTest();         // interactive console self test
 
@@ -44,23 +53,28 @@ class Kernel {
 // These are public for notational convenience; really, 
 // they're global variables used everywhere.
 
-    Thread *currentThread;	// the thread holding the CPU
-    Scheduler *scheduler;	// the ready list
-    Interrupt *interrupt;	// interrupt status
-    Statistics *stats;		// performance metrics
-    Alarm *alarm;		// the software alarm clock    
+    Thread *currentThread;  // the thread holding the CPU
+    Scheduler *scheduler;   // the ready list
+    Interrupt *interrupt;   // interrupt status
+    Statistics *stats;      // performance metrics
+    Alarm *alarm;       // the software alarm clock    
     Machine *machine;           // the simulated CPU
     SynchConsoleInput *synchConsoleIn;
     SynchConsoleOutput *synchConsoleOut;
+    FileManager *filemanager;
     SynchDisk *synchDisk;
     FileSystem *fileSystem;     
     PostOfficeInput *postOfficeIn;
     PostOfficeOutput *postOfficeOut;
+    
+    fildHeaderEntry *fileEntry = new fildHeaderEntry[100];
+    int orderNum = 0;
+
 
     int hostName;               // machine identifier
 
   private:
-    bool randomSlice;		// enable pseudo-random time slicing
+    bool randomSlice;       // enable pseudo-random time slicing
     bool debugUserProg;         // single step user program
     double reliability;         // likelihood messages are dropped
     char *consoleIn;            // file to read console input from

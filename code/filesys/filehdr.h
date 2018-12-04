@@ -17,8 +17,13 @@
 #include "disk.h"
 #include "pbitmap.h"
 
-#define NumDirect 	((SectorSize - 2 * sizeof(int)) / sizeof(int))
-#define MaxFileSize 	(NumDirect * SectorSize)
+#define NumIndirect 32
+#define IndirectSize 32
+#define NumDirect   ((SectorSize - 2 * sizeof(int)) / sizeof(int))
+#define MaxFileSize     (NumDirect * SectorSize + IndirectSize * NumIndirect * SectorSize)
+
+// #define NumDirect 	((SectorSize - 2 * sizeof(int)) / sizeof(int))
+// #define MaxFileSize 	(NumDirect * SectorSize)
 
 // The following class defines the Nachos "file header" (in UNIX terms,  
 // the "i-node"), describing where on disk to find all of the data in the file.
@@ -34,6 +39,8 @@
 // There is no constructor; rather the file header can be initialized
 // by allocating blocks for the file (if it is a new file), or by
 // reading it from disk.
+
+//static int UsedIndirectSector[NumIndirect];
 
 class FileHeader {
   public:
@@ -54,13 +61,19 @@ class FileHeader {
     int FileLength();			// Return the length of the file 
 					// in bytes
 
+    //function to allocate extended space for current file
+    bool extendFileSize(PersistentBitmap *bitMap, int fileSize);
+
     void Print();			// Print the contents of the file.
 
   private:
+    int order = -1;
     int numBytes;			// Number of bytes in the file
     int numSectors;			// Number of data sectors in the file
     int dataSectors[NumDirect];		// Disk sector numbers for each data 
 					// block in the file
+    // int UsedIndirectSector[NumIndirect];
+     int numOfIndirectSector = -1;
 };
 
 #endif // FILEHDR_H

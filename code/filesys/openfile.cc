@@ -30,6 +30,7 @@ OpenFile::OpenFile(int sector)
 { 
     hdr = new FileHeader;
     hdr->FetchFrom(sector);
+    //cout<<hdr->FileLength()<<"卡卡看"<<endl;
     seekPosition = 0;
 }
 
@@ -145,15 +146,26 @@ int
 OpenFile::WriteAt(char *from, int numBytes, int position)
 {
     int fileLength = hdr->FileLength();
+    //cout<<fileLength<<"((((("<<endl;
     int i, firstSector, lastSector, numSectors;
     bool firstAligned, lastAligned;
     char *buf;
 
-    if ((numBytes <= 0) || (position >= fileLength))
-	return 0;				// check request
-    if ((position + numBytes) > fileLength)
-	numBytes = fileLength - position;
-    DEBUG(dbgFile, "Writing " << numBytes << " bytes at " << position << " from file of length " << fileLength);
+    if (numBytes <= 0) return 0;				// check request
+
+    //cout<<position+numBytes<<")))))"<<endl;
+    if(position + numBytes > fileLength){
+        if(kernel->fileSystem->extend(this, position+numBytes-fileLength)){
+            fileLength = hdr->FileLength();
+            cout<<"extend file size succeeds!"<<endl;
+        }
+        else cout<<"extend file size fails!"<<endl;
+    }
+
+
+ //    if ((position + numBytes) > fileLength)
+	// numBytes = fileLength - position;
+ //    DEBUG(dbgFile, "Writing " << numBytes << " bytes at " << position << " from file of length " << fileLength);
 
     firstSector = divRoundDown(position, SectorSize);
     lastSector = divRoundDown(position + numBytes - 1, SectorSize);
