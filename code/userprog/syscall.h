@@ -35,6 +35,11 @@
 #define SC_ThreadExit   14
 #define SC_ThreadJoin   15
 
+#define SC_Print 16
+#define SC_WriteTo 17
+#define SC_ReadTo 18
+#define SC_Listening 19
+
 #define SC_Add		42
 
 #ifndef IN_ASM
@@ -111,7 +116,7 @@ typedef int OpenFileId;
 /* Create a Nachos file, with name "name" */
 /* Note: Create does not open the file.   */
 /* Return 1 on success, negative error code on failure */
-int Create(char *name);
+int Create(char *name, int size);
 
 /* Remove a Nachos file, with name "name" */
 int Remove(char *name);
@@ -125,7 +130,7 @@ OpenFileId Open(char *name);
  * Return the number of bytes actually read on success.
  * On failure, a negative error code is returned.
  */
-int Write(char *buffer, int size, OpenFileId id);
+int Write(char *name, int size1, char *content, int size2);
 
 /* Read "size" bytes from the open file into "buffer".  
  * Return the number of bytes actually read -- if the open file isn't
@@ -133,7 +138,7 @@ int Write(char *buffer, int size, OpenFileId id);
  * characters to read, return whatever is available (for I/O devices, 
  * you should always wait until you can return at least one character).
  */
-int Read(char *buffer, int size, OpenFileId id);
+int Read(char *name, int size1, char *content, int size2);
 
 /* Set the seek position of the open file "id"
  * to the byte "position".
@@ -173,6 +178,12 @@ int ThreadJoin(ThreadId id);
  * Deletes current thread and returns ExitCode to every waiting lokal thread.
  */
 void ThreadExit(int ExitCode);	
+
+void Print(char *name, int size);	
+
+int WriteTo(char *addressString, int size1, char *content, int size2);
+int ReadTo(char *addressString, int size1, char *content, int size2);
+void Listening();
 
 #endif /* IN_ASM */
 

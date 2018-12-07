@@ -118,7 +118,7 @@ OpenFile::ReadAt(char *into, int numBytes, int position)
     int fileLength = hdr->FileLength();
     int i, firstSector, lastSector, numSectors;
     char *buf;
-
+    
     if ((numBytes <= 0) || (position >= fileLength))
     	return 0; 				// check request
     if ((position + numBytes) > fileLength)		
@@ -137,6 +137,7 @@ OpenFile::ReadAt(char *into, int numBytes, int position)
 
     // copy the part we want
     bcopy(&buf[position - (firstSector * SectorSize)], into, numBytes);
+    //printf("%s*****\n", buf);
     delete [] buf;
     return numBytes;
 }
@@ -149,11 +150,22 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
     bool firstAligned, lastAligned;
     char *buf;
 
-    if ((numBytes <= 0) || (position >= fileLength))
+    if (numBytes <= 0)
 	return 0;				// check request
-    if ((position + numBytes) > fileLength)
-	numBytes = fileLength - position;
-    DEBUG(dbgFile, "Writing " << numBytes << " bytes at " << position << " from file of length " << fileLength);
+
+    //call function to extend current file size
+    if(position + numBytes > fileLength){
+        if(kernel->fileSystem->extend(this, position+numBytes-fileLength+4000)){
+            fileLength = hdr->FileLength();
+            cout<<"Extend file size succeeds!\n"<<endl;
+        }
+        else cout<<"Extend file size fails!\n"<<endl;
+    }
+
+
+ //    if ((position + numBytes) > fileLength)
+	// numBytes = fileLength - position;
+ //    DEBUG(dbgFile, "Writing " << numBytes << " bytes at " << position << " from file of length " << fileLength);
 
     firstSector = divRoundDown(position, SectorSize);
     lastSector = divRoundDown(position + numBytes - 1, SectorSize);

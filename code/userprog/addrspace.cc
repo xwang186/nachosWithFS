@@ -20,6 +20,10 @@
 #include "addrspace.h"
 #include "machine.h"
 #include "noff.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 //----------------------------------------------------------------------
 // SwapHeader
@@ -105,7 +109,9 @@ AddrSpace::~AddrSpace()
 bool 
 AddrSpace::Load(char *fileName) 
 {
-    OpenFile *executable = kernel->fileSystem->Open(fileName);
+    addrFileSystem *sys = new addrFileSystem();
+
+    addrOpenFile *executable = sys->Open(fileName);
     NoffHeader noffH;
     unsigned int size;
 

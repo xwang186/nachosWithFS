@@ -17,7 +17,7 @@
 #include "synchconsole.h"
 #include "synchdisk.h"
 #include "post.h"
-
+#include "filemanager.h"
 //----------------------------------------------------------------------
 // Kernel::Kernel
 // 	Interpret command line arguments in order to determine flags 
@@ -31,7 +31,7 @@ Kernel::Kernel(int argc, char **argv)
     consoleIn = NULL;          // default is stdin
     consoleOut = NULL;         // default is stdout
 #ifndef FILESYS_STUB
-    formatFlag = FALSE;
+    formatFlag = TRUE;
 #endif
     reliability = 1;            // network reliability, default is 1.0
     hostName = 0;               // machine id, also UNIX socket name
@@ -101,6 +101,7 @@ Kernel::Initialize()
     synchConsoleIn = new SynchConsoleInput(consoleIn); // input from stdin
     synchConsoleOut = new SynchConsoleOutput(consoleOut); // output to stdout
     synchDisk = new SynchDisk();    //
+    filemanager =new FileManager();
 #ifdef FILESYS_STUB
     fileSystem = new FileSystem();
 #else

@@ -50,7 +50,7 @@
 Kernel *kernel;
 Debug *debug;
 
-extern void ThreadTest(void);
+extern void ThreadTest(int);
 
 //----------------------------------------------------------------------
 // Cleanup
@@ -186,6 +186,7 @@ main(int argc, char **argv)
     bool threadTestFlag = false;
     bool consoleTestFlag = false;
     bool networkTestFlag = false;
+    int testCase = 0;
 #ifndef FILESYS_STUB
     char *copyUnixFileName = NULL;    // UNIX file to be copied into Nachos
     char *copyNachosFileName = NULL;  // name of copied file in Nachos
@@ -213,7 +214,10 @@ main(int argc, char **argv)
 	    i++;
 	}
 	else if (strcmp(argv[i], "-K") == 0) {
+        //ASSERT(i + 1 < argc);
 	    threadTestFlag = TRUE;
+        testCase = (int) strtol(argv[i + 1], (char **)NULL, 10);;
+        i++;
 	}
 	else if (strcmp(argv[i], "-C") == 0) {
 	    consoleTestFlag = TRUE;
@@ -271,8 +275,8 @@ main(int argc, char **argv)
     // run some tests, if requested
     if (threadTestFlag) {
       //kernel->ThreadSelfTest();  // test threads and synchronization
-      ThreadTest();
-    }
+      ThreadTest(testCase);
+     }
     if (consoleTestFlag) {
       kernel->ConsoleTest();   // interactive test of the synchronized console
     }
@@ -301,6 +305,7 @@ main(int argc, char **argv)
     // finally, run an initial user program if requested to do so
     if (userProgName != NULL) {
       RunUserProg(userProgName);
+      
     }
 
     // NOTE: if the procedure "main" returns, then the program "nachos"
