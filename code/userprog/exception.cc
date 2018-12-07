@@ -26,6 +26,7 @@
 #include "syscall.h"
 #include "ksyscall.h"
 #include "sender.h"
+#include "filemanager.h"
 //----------------------------------------------------------------------
 // ExceptionHandler
 // 	Entry point into the Nachos kernel.  Called when a user program
@@ -108,14 +109,21 @@ void Listening(int node){
     OpenFile *of=kernel->fileSystem->Open(filename);
     if(type=='1'){   
         printf("%s\n", filecontent);
+	    
+	kernel->filemanager->RequestWriteAt(filename);
         of->WriteAt(filecontent, 1000, 0);
+	kernel->filemanager->ReleaseWriteAt(filename);   
+	    
         char *sc_message="Write successfully!";
         send(new_socket , sc_message , strlen(sc_message) , 0 ); 
     }
     else{
     char* temp = new char[1024];
-    of->ReadAt(temp, 1024, 0);
 
+    kernel->filemanager->RequestReadAt(filename);    
+    of->ReadAt(temp, 1024, 0);
+    kernel->filemanager->ReleaseReadAt(filename);
+	    
     send(new_socket , temp , strlen(temp) , 0 ); 
     printf("File %s sent\n",filename);
     }
@@ -262,7 +270,9 @@ ExceptionHandler(ExceptionType which)
 	  	if(name[1] != '/'){
 	  		of = kernel->fileSystem->Open((char *)name);
 	  		//cout<<name[1]<<endl;
+			kernel->filemanager->RequestWriteAt(name);
 	  		of->WriteAt(content, contentSize, 0);
+			kernel->filemanager->ReleaseReadAt(name);
 	  	}
 	  	else WriteTo(name, content);
 
@@ -301,8 +311,10 @@ ExceptionHandler(ExceptionType which)
 	  	if(name[1] != '/'){
 	  		OpenFile *of=kernel->fileSystem->Open((char *)name);
 	  		char* temp = new char[contentSize];
+			
+		kernel->filemanager->RequestReadAt(name);	
     		of->ReadAt(temp, contentSize, 0);
-
+		kernel->filemanager->ReleaseReadAt(name);
 	  		readSize = 0;
 
 		  	while(readSize < contentSize){
@@ -345,7 +357,9 @@ ExceptionHandler(ExceptionType which)
 	  	//of->WriteAt("content content content", 30, 0);
 
 	  	char* temp = new char[contentSize];
+		kernel->filemanager->RequestReadAt(name);
     	of->ReadAt(temp, contentSize, 0);
+		kernel->filemanager->ReleaseReadAt(name);
 
     	//printf("%s\n", temp);
 
@@ -416,7 +430,9 @@ ExceptionHandler(ExceptionType which)
 
 	  	OpenFile *of=kernel->fileSystem->Open((char *)name);
 
+		kernel->filemanager->RequestReadAt(name);
 	  	of->WriteAt(content, contentSize, 0);
+		kernel->filemanager->ReleaseReadAt(name);
 
 	  	kernel->machine->WriteRegister(2, (int)contentSize);
 		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
