@@ -1,21 +1,33 @@
+/* add.c
+ *	Simple program to test whether the systemcall interface works.
+ *	
+ *	Just do a add syscall that adds two values and returns the result.
+ *
+ */
+
 #include "syscall.h"
 
 int
 main()
 {
-  
-   //char *name1 = "";
 
-   //char *name2 = "File2_2";
-    char *content="I am node 3，I will change all of you!!!!";
-    char buf[50];
+	char buf[30];
+   char *name = "testFile";
+
+   Create(name, 10);
+
+   Write(name, 10, "abcdefghijklmnopqrstuvwxyzzzzz", 32);
+
   //Write("test", 4, "abcdefghijklmnopqrstuvwxyz", 26);
-  //Read("test", 4, buf, 1000);
+  Read(name, 8, buf, 30);
 
- // Print(buf, 1000);
-  WriteTo("1/File2_1", 10, content, 50);
-   ReadTo("1/File2_1",10,buf,50);
-   Print(buf, 50);
-    
+  Print(buf, 30);
+
+  Listening();
+	//ReadTo("0/wwww11",buf);
+	//Print(buf, 1000);
+  
   Exit(0);
 }
+
+

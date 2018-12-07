@@ -187,7 +187,7 @@ ExceptionHandler(ExceptionType which)
 
 	  	}
 
-	  	kernel->fileSystem->Create((char *)name, size);
+	  	kernel->fileSystem->Create((char *)name, 1000);
 
 	  	//OpenFile *of=kernel->fileSystem->Open((char *)name);
 
@@ -207,18 +207,18 @@ ExceptionHandler(ExceptionType which)
 	}
 	case SC_Print:{
 
-	  	int addr = (int)kernel->machine->ReadRegister(4);
+	  	int address = (int)kernel->machine->ReadRegister(4);
 	  	int size = (int)kernel->machine->ReadRegister(5);
 
 	  	int readSize = 0;
-	  	char buffer[size+1];
-	  	buffer[size] = '\0';
+	  	char content[size+1];
+	  	content[size] = '\0';
 
 	  	while(readSize < size){
-	  		kernel->machine->ReadMem(addr++, 1, (int* )&buffer[readSize]); 
+	  		kernel->machine->ReadMem(address++, 1, (int* )&content[readSize]); 
 
 		  	//print the read char to console
-		  	printf("%c", buffer[readSize++]);
+		  	cout<<content[readSize++];
 
 	  	}
 
