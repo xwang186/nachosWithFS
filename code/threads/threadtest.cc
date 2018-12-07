@@ -129,7 +129,6 @@ void test3(int which){
     kernel->fileSystem->Remove((char *)u11);
     kernel->fileSystem->Remove((char *)u12);
 }
-
 void
 FileTest(int which){
     char* t="wwww";
@@ -159,6 +158,38 @@ FileTest(int which){
         of->ReadAt(temp, 100, 0);
         printf("%d: \n%s\n\n",which, temp);
         //kernel->currentThread->Yield();
+}
+
+void
+unsafe_FileTest(int which){
+   
+    char* t="wwww";
+
+    OpenFile *of=kernel->fileSystem->Open((char *)t);
+    char *input;
+    if (which==1)
+    {
+        input="Bye!";
+    }
+    else{
+        input="Hel!";
+    //input[1]=(char)(which+48);
+    }
+    //kernel->filemanager->RequestWriteAt(t);
+    for (int i = 0; i < 10; ++i)
+    {
+        printf("Written once for process %d\n", which);
+
+         of->WriteAt(input, 4, i*4);
+
+         kernel->currentThread->Yield();
+    }
+    //kernel->filemanager->ReleaseWriteAt(t);
+    char* temp = new char[200];
+
+        of->ReadAt(temp, 100, 0);
+        printf("%d: \n%s\n\n",which, temp);
+        //kernel->currentThread->Yield();
 
 }
 
@@ -177,31 +208,63 @@ void DeleteIt(char *filename){
     printf("The file %s is not deleted successfully!\n", filename);
   }
 }
+void unsafe_DeleteIt(char *filename){
+    printf("Deleting want to execute\n" );
+  OpenFile *of=kernel->fileSystem->Open(filename);
+
+  //kernel->filemanager->DeleteAt(filename);
+  bool k=kernel->fileSystem->Remove(filename);
+  if (k)
+  {
+      /* code */
+    printf("The file %s is deleted successfully!\n", filename);
+  }
+  else{
+    printf("The file %s is not deleted successfully!\n", filename);
+  }
+}
 
 void TestForMutex(){
-    kernel->fileSystem->Create("wwww",30000);
+    
+    kernel->fileSystem->Create("wwww",500);
+    printf("Doing SAFE file Write/Write Testing...\n Two threads are writing to the same file \"wwww\" with different content at the same time. There are Yields during write operations but there is no Yield between Write and Read.\n");
     Thread *t = new Thread("forked thread");
     t->Fork((VoidFunctionPtr) FileTest, (void *) 1);
 
     FileTest(0);
-    Thread *d=new Thread("Delete file");
-    d->Fork((VoidFunctionPtr) DeleteIt, (void *) "wwww");
     kernel->currentThread->Yield();
 }
 
-void TestString(char *name){
-    int size = strlen(name);
+void unsafe_TestForMutex(){
+    kernel->fileSystem->Create("wwww",500);
+     printf("Doing UNSAFE file Write/Write Testing...\n Two threads are writing to the same file \"wwww\" with different content at the same time. There are Yields during write operations but there is no Yield between Write and Read.\n");
+    Thread *t = new Thread("forked thread");
+    t->Fork((VoidFunctionPtr) unsafe_FileTest, (void *) 1);
 
-    char node = name[0];
-    char filename[size-2];
-
-    cout<<size<<endl;
-    for(int i=0; i<size-2; i++){
-        filename[i] = name[i+2];
-    }
-
-    cout<<node<<"/"<<filename<<endl;
+    unsafe_FileTest(0);
+    kernel->currentThread->Yield();
 }
+void TestForDelete(){
+     kernel->fileSystem->Create("wwww",500);
+     printf("Tesing for SAFE delete. The output will show where the delete request is genereated and when the delete operation is executed.\n");
+    //Thread *t = new Thread("forked thread");
+    //t->Fork((VoidFunctionPtr) FileTest, (void *) 1);
+    Thread *d=new Thread("Delete file");
+    d->Fork((VoidFunctionPtr) DeleteIt, (void *) "wwww");
+    FileTest(0);
+
+}
+void unsafe_TestForDelete(){
+ kernel->fileSystem->Create("wwww",500);
+     printf("Tesing for UNSAFE delete. The output will show where the delete request is genereated and when the delete operation is executed.\n");
+    //Thread *t = new Thread("forked thread");
+    //t->Fork((VoidFunctionPtr) FileTest, (void *) 1);
+    Thread *d=new Thread("Delete file");
+    d->Fork((VoidFunctionPtr) unsafe_DeleteIt, (void *) "wwww");
+    FileTest(0);
+
+}
+
 
 void
 ThreadTest(int i)
@@ -215,5 +278,17 @@ ThreadTest(int i)
     }
     if(i == 2) {
         t->Fork((VoidFunctionPtr) test3, (void *) 1);
+    }
+    if(i == 3) {
+        TestForMutex();
+    }
+    if(i == 4) {
+        unsafe_TestForDelete();
+    }
+    if(i == 5) {
+        TestForDelete();
+    }
+    if(i == 6) {
+        unsafe_TestForDelete();
     }
 }
