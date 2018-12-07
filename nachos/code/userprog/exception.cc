@@ -1,0 +1,447 @@
+// exception.cc 
+//	Entry point into the Nachos kernel from user programs.
+//	There are two kinds of things that can cause control to
+//	transfer back to here from user code:
+//
+//	syscall -- The user code explicitly requests to call a procedure
+//	in the Nachos kernel.  Right now, the only function we support is
+//	"Halt".
+//
+//	exceptions -- The user code does something that the CPU can't handle.
+//	For instance, accessing memory that doesn't exist, arithmetic errors,
+//	etc.  
+//
+//	Interrupts (which can also cause control to transfer from user
+//	code into the Nachos kernel) are handled elsewhere.
+//
+// For now, this only handles the Halt() system call.
+// Everything else core dumps.
+//
+// Copyright (c) 1992-1996 The Regents of the University of California.
+// All rights reserved.  See copyright.h for copyright notice and limitation 
+// of liability and disclaimer of warranty provisions.
+
+#include "copyright.h"
+#include "main.h"
+#include "syscall.h"
+#include "ksyscall.h"
+#include "sender.h"
+//----------------------------------------------------------------------
+// ExceptionHandler
+// 	Entry point into the Nachos kernel.  Called when a user program
+//	is executing, and either does a syscall, or generates an addressing
+//	or arithmetic exception.
+//
+// 	For system calls, the following is the calling convention:
+//
+// 	system call code -- r2
+//		arg1 -- r4
+//		arg2 -- r5
+//		arg3 -- r6
+//		arg4 -- r7
+//
+//	The result of the system call, if any, must be put back into r2. 
+//
+// If you are handling a system call, don't forget to increment the pc
+// before returning. (Or else you'll loop making the same system call forever!)
+//
+//	"which" is the kind of exception.  The list of possible exceptions 
+//	is in machine.h.
+//----------------------------------------------------------------------
+
+#define PORT 55555
+
+void Listening(int node){  
+    int server_fd, new_socket, valread; 
+    struct sockaddr_in address; 
+    int opt = 1; 
+    int addrlen = sizeof(address); 
+    
+    char *hello = "Hello from server"; 
+       
+    // Creating socket file descriptor 
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
+    { 
+        perror("socket failed"); 
+        exit(EXIT_FAILURE); 
+    } 
+       
+    // Forcefully attaching socket to the port 8080 
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, 
+                                                  &opt, sizeof(opt))) 
+    { 
+        perror("setsockopt"); 
+        exit(EXIT_FAILURE); 
+    } 
+    address.sin_family = AF_INET; 
+    address.sin_addr.s_addr = INADDR_ANY; 
+    address.sin_port = htons( PORT+node); 
+       
+    // Forcefully attaching socket to the port 8080 
+    if (bind(server_fd, (struct sockaddr *)&address,  
+                                 sizeof(address))<0) 
+    { 
+        perror("bind failed"); 
+        exit(EXIT_FAILURE); 
+    } 
+    if (listen(server_fd, 3) < 0) 
+    { 
+        perror("listen"); 
+        exit(EXIT_FAILURE); 
+    } 
+    while(TRUE){
+    if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
+                       (socklen_t*)&addrlen))<0) 
+    { 
+        perror("accept"); 
+        exit(EXIT_FAILURE); 
+    } 
+    char request[1024] ={0}; 
+    char type='m';
+    char *filename=new char[20];
+    char *filecontent=new char[1000];
+    valread = read( new_socket , request, 1024); 
+    type=TrasferString(request,filename,filecontent);
+    printf("Request type: %c\n",type);
+    printf("Request type: %s filename Length:%d \n",filename ,strlen(filename));
+    OpenFile *of=kernel->fileSystem->Open(filename);
+    if(type=='1'){   
+        printf("%s\n", filecontent);
+        of->WriteAt(filecontent, 1000, 0);
+        char *sc_message="Write successfully!";
+        send(new_socket , sc_message , strlen(sc_message) , 0 ); 
+    }
+    else{
+    //cout<<"~~~~~"<<endl;
+    char* temp = new char[1024];
+    of->ReadAt(temp, 1024, 0);
+    
+    send(new_socket , temp , strlen(temp) , 0 ); 
+    printf("File %s sent\n",filename);
+    }
+    
+}
+
+}
+
+
+void
+ExceptionHandler(ExceptionType which)
+{
+    int type = kernel->machine->ReadRegister(2);
+
+    DEBUG(dbgSys, "Received Exception " << which << " type: " << type << "\n");
+
+    switch (which) {
+    case SyscallException:
+      switch(type) {
+      case SC_Halt:
+	DEBUG(dbgSys, "Shutdown, initiated by user program.\n");
+
+	SysHalt();
+
+	ASSERTNOTREACHED();
+	break;
+
+      case SC_Add:
+	DEBUG(dbgSys, "Add " << kernel->machine->ReadRegister(4) << " + " << kernel->machine->ReadRegister(5) << "\n");
+	
+	/* Process SysAdd Systemcall*/
+	int result;
+	result = SysAdd(/* int op1 */(int)kernel->machine->ReadRegister(4),
+			/* int op2 */(int)kernel->machine->ReadRegister(5));
+
+	DEBUG(dbgSys, "Add returning with " << result << "\n");
+	/* Prepare Result */
+	kernel->machine->WriteRegister(2, (int)result);
+	
+	/* Modify return point */
+	{
+	  /* set previous programm counter (debugging only)*/
+	  kernel->machine->WriteRegister(PrevPCReg, kernel->machine->ReadRegister(PCReg));
+
+	  /* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  
+	  /* set next programm counter for brach execution */
+	  kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+	}
+
+	return;
+	
+	ASSERTNOTREACHED();
+
+	break;
+	case SC_Create:{
+
+		int addr = (int)kernel->machine->ReadRegister(4);
+	  	int size = (int)kernel->machine->ReadRegister(5);
+
+	  	int readSize = 0;
+	  	char name[size+1];
+	  	name[size] = '\0';
+
+	  	while(readSize < size){
+
+	  		kernel->machine->ReadMem(addr++, 1, (int* )&name[readSize++]); 
+
+	  	}
+
+	  	kernel->fileSystem->Create((char *)name, size);
+
+	  	//OpenFile *of=kernel->fileSystem->Open((char *)name);
+
+	  	//of->WriteAt(content, contentSize, 0);
+
+		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  
+	  /* set next programm counter for brach execution */
+	  kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+
+	  return;
+	
+		ASSERTNOTREACHED();
+
+		break;
+	}
+	case SC_Print:{
+
+	  	int addr = (int)kernel->machine->ReadRegister(4);
+	  	int size = (int)kernel->machine->ReadRegister(5);
+
+	  	int readSize = 0;
+	  	char buffer[size+1];
+	  	buffer[size] = '\0';
+
+	  	while(readSize < size){
+	  		kernel->machine->ReadMem(addr++, 1, (int* )&buffer[readSize]); 
+
+		  	//print the read char to console
+		  	printf("%c", buffer[readSize++]);
+
+	  	}
+
+	  	cout<<endl;
+
+	  	kernel->machine->WriteRegister(2, (int)size);
+
+	  	kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+		  
+		kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+  4);
+
+	  	return;
+	  	ASSERTNOTREACHED();
+	  	break;
+	}
+	case SC_WriteTo:{
+
+		int nameAddr = (int)kernel->machine->ReadRegister(4);
+	  	int nameSize = (int)kernel->machine->ReadRegister(5);
+	  	int contentAddr = (int)kernel->machine->ReadRegister(6);
+	  	int contentSize = (int)kernel->machine->ReadRegister(7);
+
+	  	int readSize = 0;
+	  	char name[nameSize+1];
+	  	name[nameSize] = '\0';
+
+	  	while(readSize < nameSize){
+	  		kernel->machine->ReadMem(nameAddr++, 1, (int* )&name[readSize++]); 
+	  	}
+
+	  	readSize = 0;
+	  	char content[contentSize+1];
+	  	content[contentSize] = '\0';
+
+	  	while(readSize < contentSize){
+	  		//read targer char* buffer one char by one char
+	  		kernel->machine->ReadMem(contentAddr++, 1, (int* )&content[readSize++]); 
+	  	}
+
+	  	WriteTo(name, content);
+
+		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  
+	  /* set next programm counter for brach execution */
+	  kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+
+	  return;
+	
+		ASSERTNOTREACHED();
+
+		break;
+	}
+	case SC_ReadTo:{
+
+		int nameAddr = (int)kernel->machine->ReadRegister(4);
+	  	int nameSize = (int)kernel->machine->ReadRegister(5);
+	  	int contentAddr = (int)kernel->machine->ReadRegister(6);
+	  	int contentSize = (int)kernel->machine->ReadRegister(7);
+
+	  	int readSize = 0;
+	  	char name[nameSize+1];
+	  	name[nameSize] = '\0';
+
+	  	while(readSize < nameSize){
+	  		kernel->machine->ReadMem(nameAddr++, 1, (int* )&name[readSize++]); 
+	  	}
+
+	  	readSize = 0;
+	  	char content[contentSize+1];
+	  	content[contentSize] = '\0';
+
+	  	while(readSize < contentSize){
+	  		//read targer char* buffer one char by one char
+	  		kernel->machine->ReadMem(contentAddr++, 1, (int* )&content[readSize++]); 
+	  	}
+
+		ReadFrom(name, content);
+		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  
+	  /* set next programm counter for brach execution */
+	  kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+
+	  return;
+	
+		ASSERTNOTREACHED();
+
+		break;
+	}
+	case SC_Read:{
+		int nameAddr = (int)kernel->machine->ReadRegister(4);
+	  	int nameSize = (int)kernel->machine->ReadRegister(5);
+	  	int contentAddr = (int)kernel->machine->ReadRegister(6);
+	  	int contentSize = (int)kernel->machine->ReadRegister(7);
+
+	  	int readSize = 0;
+	  	char name[nameSize+1];
+	  	name[nameSize] = '\0';
+
+	  	while(readSize < nameSize){
+	  		kernel->machine->ReadMem(nameAddr++, 1, (int* )&name[readSize++]); 
+	  	}
+
+	  	//kernel->fileSystem->Create((char *)name, 1000);
+
+	  	OpenFile *of=kernel->fileSystem->Open((char *)name);
+
+	  	//of->WriteAt("content content content", 30, 0);
+
+	  	char* temp = new char[contentSize];
+    	of->ReadAt(temp, contentSize, 0);
+
+    	//printf("%s\n", temp);
+
+
+	  	readSize = 0;
+
+	  	while(readSize < contentSize){
+	  		//read targer char* buffer one char by one char
+	  		kernel->machine->WriteMem(contentAddr++, 1, temp[readSize++]); 
+	  	}
+
+	  	
+
+	  	kernel->machine->WriteRegister(2, (int)contentSize);
+		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	    kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  
+	    /* set next programm counter for brach execution */
+	    kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+
+	    return;
+	
+		ASSERTNOTREACHED();
+
+		break;
+	}
+	case SC_Exit:
+  	{
+	  	int status = (int)kernel->machine->ReadRegister(4);
+
+	  	cout<<"Eixt() userprogram with input "<<status<<endl;
+
+	  	kernel->currentThread->Finish();
+	  	
+	  	kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+		  
+		kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+  4);
+
+	  	return;
+	  	ASSERTNOTREACHED();
+	  	break;
+    }
+	case SC_Write:{
+
+	  	int nameAddr = (int)kernel->machine->ReadRegister(4);
+	  	int nameSize = (int)kernel->machine->ReadRegister(5);
+	  	int contentAddr = (int)kernel->machine->ReadRegister(6);
+	  	int contentSize = (int)kernel->machine->ReadRegister(7);
+
+	  	int readSize = 0;
+	  	char name[nameSize+1];
+	  	name[nameSize] = '\0';
+
+	  	while(readSize < nameSize){
+	  		kernel->machine->ReadMem(nameAddr++, 1, (int* )&name[readSize++]); 
+	  	}
+
+	  	readSize = 0;
+	  	char content[contentSize+1];
+	  	content[contentSize] = '\0';
+
+	  	while(readSize < contentSize){
+	  		//read targer char* buffer one char by one char
+	  		kernel->machine->ReadMem(contentAddr++, 1, (int* )&content[readSize++]); 
+	  	}
+
+	  	//kernel->fileSystem->Create((char *)name, 1000);
+
+	  	OpenFile *of=kernel->fileSystem->Open((char *)name);
+
+	  	of->WriteAt(content, contentSize, 0);
+
+	  	kernel->machine->WriteRegister(2, (int)contentSize);
+		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	    kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  
+	    /* set next programm counter for brach execution */
+	    kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+
+	  return;
+	
+		ASSERTNOTREACHED();
+
+		break;
+	}
+	case SC_Listening:
+	{	
+
+		Listening(kernel->hostName);
+
+		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	    kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  
+	    /* set next programm counter for brach execution */
+	    kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+
+	  return;
+	
+		ASSERTNOTREACHED();
+
+		break;
+	}
+
+      default:
+	cerr << "Unexpected system call " << type << "\n";
+	break;
+      }
+      break;
+    default:
+      cerr << "Unexpected user mode exception" << (int)which << "\n";
+      break;
+    }
+    ASSERTNOTREACHED();
+}

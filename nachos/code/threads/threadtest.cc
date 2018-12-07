@@ -1,0 +1,219 @@
+#include "kernel.h"
+#include "main.h"
+#include "thread.h"
+#include "filemanager.h"
+
+void test1(int which){
+    char* input = new char[120000];
+    for(int i=0; i<120000; i++){
+        if(i<20000) input[i] = 'a';
+        else if(i<40000) input[i] = 'b';
+        else if(i<60000) input[i] = 'c';
+        else if(i<80000) input[i] = 'd';
+        else  input[i] = 'e';
+    }
+    input[119999] = '!';
+
+    cout<<"Test for maximum file size:"<<endl;
+    char* t="test";
+    kernel->fileSystem->Create(t,124000);
+    OpenFile *test=kernel->fileSystem->Open((char *)t);
+    test->WriteAt(input, 120000, 0);
+    char* temp = new char[120000];
+    test->ReadAt(temp, 120000, 0);
+    printf("%s\n", temp);
+    kernel->fileSystem->Remove((char *)t);
+    cout<<endl<<endl<<endl;
+}
+
+void test2(int which){
+    char* input = new char[120000];
+    for(int i=0; i<120000; i++){
+        if(i<20000) input[i] = 'a';
+        else if(i<40000) input[i] = 'b';
+        else if(i<60000) input[i] = 'c';
+        else if(i<80000) input[i] = 'd';
+        else  input[i] = 'e';
+    }
+    input[119999] = '!';
+
+    cout<<"Test for extensible file size:"<<endl;
+    char* t="test";
+    kernel->fileSystem->Create(t,0);
+    OpenFile *test=kernel->fileSystem->Open((char *)t);
+    test->WriteAt(input, 120000, 0);
+    char* temp = new char[120000];
+    test->ReadAt(temp, 120000, 0);
+    printf("%s\n", temp);
+    kernel->fileSystem->Remove((char *)t);
+    cout<<endl<<endl<<endl;
+}
+
+void test3(int which){
+    char* input = new char[1500];
+    for(int i=0; i<1500; i++){
+        input[i] = 'a';
+    }
+
+    cout<<"Test for more than ten files:"<<endl;
+    char* u1="test1";
+    char* u2="test2";
+    char* u3="test3";
+    char* u4="test4";
+    char* u5="test5";
+    char* u6="test6";
+    char* u7="test7";
+    char* u8="test8";
+    char* u9="test9";
+    char* u10="test10";
+    char* u11="test11";
+    char* u12="test12";
+    kernel->fileSystem->Create(u1,0);
+    OpenFile *of1=kernel->fileSystem->Open((char *)u1);
+    of1->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u2,0);
+    OpenFile *of2=kernel->fileSystem->Open((char *)u2);
+    of2->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u3,0);
+    OpenFile *of3=kernel->fileSystem->Open((char *)u3);
+    of3->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u4,0);
+    OpenFile *of4=kernel->fileSystem->Open((char *)u4);
+    of4->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u5,0);
+    OpenFile *of5=kernel->fileSystem->Open((char *)u5);
+    of5->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u6,0);
+    OpenFile *of6=kernel->fileSystem->Open((char *)u6);
+    of6->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u7,0);
+    OpenFile *of7=kernel->fileSystem->Open((char *)u7);
+    of7->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u8,0);
+    OpenFile *of8=kernel->fileSystem->Open((char *)u8);
+    of8->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u9,0);
+    OpenFile *of9=kernel->fileSystem->Open((char *)u9);
+    of9->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u10,0);
+    OpenFile *of10=kernel->fileSystem->Open((char *)u10);
+    of10->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u11,0);
+    OpenFile *of11=kernel->fileSystem->Open((char *)u11);
+    of11->WriteAt(input, 1000, 0);
+
+    kernel->fileSystem->Create(u12,0);
+    OpenFile *of12=kernel->fileSystem->Open((char *)u12);
+    of12->WriteAt(input, 1000, 0);
+    
+    kernel->fileSystem->Remove((char *)u1);
+    kernel->fileSystem->Remove((char *)u2);
+    kernel->fileSystem->Remove((char *)u3);
+    kernel->fileSystem->Remove((char *)u4);
+    kernel->fileSystem->Remove((char *)u5);
+    kernel->fileSystem->Remove((char *)u6);
+    kernel->fileSystem->Remove((char *)u7);
+    kernel->fileSystem->Remove((char *)u8);
+    kernel->fileSystem->Remove((char *)u9);
+    kernel->fileSystem->Remove((char *)u10);
+    kernel->fileSystem->Remove((char *)u11);
+    kernel->fileSystem->Remove((char *)u12);
+}
+
+void
+FileTest(int which){
+    char* t="wwww";
+
+    OpenFile *of=kernel->fileSystem->Open((char *)t);
+    char *input;
+    if (which==1)
+    {
+        input="Bye!";
+    }
+    else{
+        input="Hel!";
+    //input[1]=(char)(which+48);
+    }
+    kernel->filemanager->RequestWriteAt(t);
+    for (int i = 0; i < 10; ++i)
+    {
+        printf("Written once for process %d\n", which);
+
+         of->WriteAt(input, 4, i*4);
+
+         kernel->currentThread->Yield();
+    }
+    kernel->filemanager->ReleaseWriteAt(t);
+    char* temp = new char[200];
+
+        of->ReadAt(temp, 100, 0);
+        printf("%d: \n%s\n\n",which, temp);
+        //kernel->currentThread->Yield();
+
+}
+
+void DeleteIt(char *filename){
+    printf("Deleting want to execute\n" );
+  OpenFile *of=kernel->fileSystem->Open(filename);
+
+  kernel->filemanager->DeleteAt(filename);
+  bool k=kernel->fileSystem->Remove(filename);
+  if (k)
+  {
+      /* code */
+    printf("The file %s is deleted successfully!\n", filename);
+  }
+  else{
+    printf("The file %s is not deleted successfully!\n", filename);
+  }
+}
+
+void TestForMutex(){
+    kernel->fileSystem->Create("wwww",30000);
+    Thread *t = new Thread("forked thread");
+    t->Fork((VoidFunctionPtr) FileTest, (void *) 1);
+
+    FileTest(0);
+    Thread *d=new Thread("Delete file");
+    d->Fork((VoidFunctionPtr) DeleteIt, (void *) "wwww");
+    kernel->currentThread->Yield();
+}
+
+void TestString(char *name){
+    int size = strlen(name);
+
+    char node = name[0];
+    char filename[size-2];
+
+    cout<<size<<endl;
+    for(int i=0; i<size-2; i++){
+        filename[i] = name[i+2];
+    }
+
+    cout<<node<<"/"<<filename<<endl;
+}
+
+void
+ThreadTest(int i)
+{
+    Thread *t = new Thread("forked thread");
+    if(i == 0) {
+        t->Fork((VoidFunctionPtr) test1, (void *) 1);
+    }
+    if(i == 1) {
+        t->Fork((VoidFunctionPtr) test2, (void *) 1);
+    }
+    if(i == 2) {
+        t->Fork((VoidFunctionPtr) test3, (void *) 1);
+    }
+}
