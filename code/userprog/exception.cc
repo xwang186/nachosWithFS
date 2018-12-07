@@ -173,7 +173,7 @@ ExceptionHandler(ExceptionType which)
 
 	break;
 	case SC_Create:{
-		
+
 		int addr = (int)kernel->machine->ReadRegister(4);
 	  	int size = (int)kernel->machine->ReadRegister(5);
 
@@ -216,7 +216,7 @@ ExceptionHandler(ExceptionType which)
 	  	while(readSize < size){
 	  		kernel->machine->ReadMem(address++, 1, (int* )&content[readSize]); 
 
-		  	//print the read char to console
+		  	
 		  	cout<<content[readSize++];
 
 	  	}
@@ -253,12 +253,20 @@ ExceptionHandler(ExceptionType which)
 	  	content[contentSize] = '\0';
 
 	  	while(readSize < contentSize){
-	  		//read targer char* buffer one char by one char
+	  		
 	  		kernel->machine->ReadMem(contentAddr++, 1, (int* )&content[readSize++]); 
 	  	}
 
-	  	WriteTo(name, content);
+	  	OpenFile *of;
 
+	  	if(name[1] != '/'){
+	  		of = kernel->fileSystem->Open((char *)name);
+	  		//cout<<name[1]<<endl;
+	  		of->WriteAt(content, contentSize, 0);
+	  	}
+	  	else WriteTo(name, content);
+
+	  	kernel->machine->WriteRegister(2, (int)contentSize);
 		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
 	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
 	  
@@ -288,14 +296,22 @@ ExceptionHandler(ExceptionType which)
 
 	  	readSize = 0;
 	  	char content[contentSize+1];
-	  	//content[contentSize] = '\0';
+	  	content[contentSize] = '\0';
 
-	  	while(readSize < contentSize){
-	  		//read targer char* buffer one char by one char
-	  		kernel->machine->ReadMem(contentAddr++, 1, (int* )&content[readSize++]); 
+	  	if(name[1] != '/'){
+	  		OpenFile *of=kernel->fileSystem->Open((char *)name);
+	  		char* temp = new char[contentSize];
+    		of->ReadAt(temp, contentSize, 0);
+
+	  		readSize = 0;
+
+		  	while(readSize < contentSize){
+		  		
+		  		kernel->machine->WriteMem(contentAddr++, 1, temp[readSize++]); 
+		  	}
 	  	}
+	  	else ReadFrom(name, content);
 
-		ReadFrom(name, content);
 		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
 	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
 	  
@@ -337,7 +353,7 @@ ExceptionHandler(ExceptionType which)
 	  	readSize = 0;
 
 	  	while(readSize < contentSize){
-	  		//read targer char* buffer one char by one char
+	  		
 	  		kernel->machine->WriteMem(contentAddr++, 1, temp[readSize++]); 
 	  	}
 
@@ -392,7 +408,7 @@ ExceptionHandler(ExceptionType which)
 	  	content[contentSize] = '\0';
 
 	  	while(readSize < contentSize){
-	  		//read targer char* buffer one char by one char
+	  		
 	  		kernel->machine->ReadMem(contentAddr++, 1, (int* )&content[readSize++]); 
 	  	}
 

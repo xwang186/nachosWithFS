@@ -16,14 +16,14 @@ main()
 
    Create(name, 10);
 
-   Write(name, 10, "abcdefghijklmnopqrstuvwxyzzzzz", 32);
+   WriteTo(name, 10, "abcdefghijklmnopqrstuvwxyzzzzz", 32);
 
   //Write("test", 4, "abcdefghijklmnopqrstuvwxyz", 26);
-  Read(name, 8, buf, 30);
+  ReadTo(name, 8, buf, 30);
 
   Print(buf, 30);
 
-  Listening();
+  //Listening();
 	//ReadTo("0/wwww11",buf);
 	//Print(buf, 1000);
   
