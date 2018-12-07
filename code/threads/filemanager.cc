@@ -82,17 +82,19 @@ FileManager::DeleteAt(char*filename){
 
 void
 FileManager::AddNewFile(char *filename){
+	char *realname=(char *)malloc(1000*sizeof(char));
+	strcpy(realname,filename);
 	for (int i = 0; i < currIndex-1; ++i)
 	{
 		if (filetables[i]==NULL)
 		{
-			filetables[i]=filename;
+			filetables[i]=realname;
 			return;
 		}
 	}
-	filetables[currIndex]=filename;
+
+	filetables[currIndex]=realname;
 	stats[currIndex]=SPACING;
-	printf("%s\n", filetables[currIndex]);
 	currIndex++;
 	
 }
