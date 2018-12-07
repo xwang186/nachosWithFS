@@ -11,7 +11,7 @@ int
 main()
 {
 
-	char buf[30];
+   char buf[30];
    char *name = "testFile";
 
    Create(name, 10);

@@ -234,7 +234,7 @@ FileSystem::Open(char *name)
     OpenFile *openFile = NULL;
     int sector;
 
-    DEBUG(dbgFile, "Opening file " << name);
+    DEBUG(dbgFile, "Opening file" << name);
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name); 
     if (sector >= 0) 		

@@ -1,6 +1,6 @@
 // main.cc 
-//	Driver code to initialize, selftest, and run the 
-//	operating system kernel.  
+//  Driver code to initialize, selftest, and run the 
+//  operating system kernel.  
 //
 // Usage: nachos -d <debugflags> -rs <random seed #>
 //              -s -x <nachos file> -ci <consoleIn> -co <consoleOut>
@@ -54,7 +54,7 @@ extern void ThreadTest(int);
 
 //----------------------------------------------------------------------
 // Cleanup
-//	Delete kernel data structures; called when user hits "ctl-C".
+//  Delete kernel data structures; called when user hits "ctl-C".
 //----------------------------------------------------------------------
 
 static void 
@@ -165,16 +165,16 @@ RunUserProg(void *filename) {
 
 //----------------------------------------------------------------------
 // main
-// 	Bootstrap the operating system kernel.  
-//	
-//	Initialize kernel data structures
-//	Call some test routines
-//	Call "Run" to start an initial user program running
+//  Bootstrap the operating system kernel.  
+//  
+//  Initialize kernel data structures
+//  Call some test routines
+//  Call "Run" to start an initial user program running
 //
-//	"argc" is the number of command line arguments (including the name
-//		of the command) -- ex: "nachos -d +" -> argc = 3 
-//	"argv" is an array of strings, one for each command line argument
-//		ex: "nachos -d +" -> argv = {"nachos", "-d", "+"}
+//  "argc" is the number of command line arguments (including the name
+//      of the command) -- ex: "nachos -d +" -> argc = 3 
+//  "argv" is an array of strings, one for each command line argument
+//      ex: "nachos -d +" -> argv = {"nachos", "-d", "+"}
 //----------------------------------------------------------------------
 
 int
@@ -201,64 +201,64 @@ main(int argc, char **argv)
     // the Kernel constructor
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-d") == 0) {
-	    ASSERT(i + 1 < argc);   // next argument is debug string
+        ASSERT(i + 1 < argc);   // next argument is debug string
             debugArg = argv[i + 1];
-	    i++;
-	}
-	else if (strcmp(argv[i], "-z") == 0) {
+        i++;
+    }
+    else if (strcmp(argv[i], "-z") == 0) {
             cout << copyright << "\n";
-	}
-	else if (strcmp(argv[i], "-x") == 0) {
-	    ASSERT(i + 1 < argc);
-	    userProgName = argv[i + 1];
-	    i++;
-	}
-	else if (strcmp(argv[i], "-K") == 0) {
+    }
+    else if (strcmp(argv[i], "-x") == 0) {
+        ASSERT(i + 1 < argc);
+        userProgName = argv[i + 1];
+        i++;
+    }
+    else if (strcmp(argv[i], "-K") == 0) {
         //ASSERT(i + 1 < argc);
-	    threadTestFlag = TRUE;
+        threadTestFlag = TRUE;
         testCase = (int) strtol(argv[i + 1], (char **)NULL, 10);;
         i++;
-	}
-	else if (strcmp(argv[i], "-C") == 0) {
-	    consoleTestFlag = TRUE;
-	}
-	else if (strcmp(argv[i], "-N") == 0) {
-	    networkTestFlag = TRUE;
-	}
+    }
+    else if (strcmp(argv[i], "-C") == 0) {
+        consoleTestFlag = TRUE;
+    }
+    else if (strcmp(argv[i], "-N") == 0) {
+        networkTestFlag = TRUE;
+    }
 #ifndef FILESYS_STUB
-	else if (strcmp(argv[i], "-cp") == 0) {
-	    ASSERT(i + 2 < argc);
-	    copyUnixFileName = argv[i + 1];
-	    copyNachosFileName = argv[i + 2];
-	    i += 2;
-	}
-	else if (strcmp(argv[i], "-p") == 0) {
-	    ASSERT(i + 1 < argc);
-	    printFileName = argv[i + 1];
-	    i++;
-	}
-	else if (strcmp(argv[i], "-r") == 0) {
-	    ASSERT(i + 1 < argc);
-	    removeFileName = argv[i + 1];
-	    i++;
-	}
-	else if (strcmp(argv[i], "-l") == 0) {
-	    dirListFlag = true;
-	}
-	else if (strcmp(argv[i], "-D") == 0) {
-	    dumpFlag = true;
-	}
+    else if (strcmp(argv[i], "-cp") == 0) {
+        ASSERT(i + 2 < argc);
+        copyUnixFileName = argv[i + 1];
+        copyNachosFileName = argv[i + 2];
+        i += 2;
+    }
+    else if (strcmp(argv[i], "-p") == 0) {
+        ASSERT(i + 1 < argc);
+        printFileName = argv[i + 1];
+        i++;
+    }
+    else if (strcmp(argv[i], "-r") == 0) {
+        ASSERT(i + 1 < argc);
+        removeFileName = argv[i + 1];
+        i++;
+    }
+    else if (strcmp(argv[i], "-l") == 0) {
+        dirListFlag = true;
+    }
+    else if (strcmp(argv[i], "-D") == 0) {
+        dumpFlag = true;
+    }
 #endif //FILESYS_STUB
-	else if (strcmp(argv[i], "-u") == 0) {
+    else if (strcmp(argv[i], "-u") == 0) {
             cout << "Partial usage: nachos [-z -d debugFlags]\n";
             cout << "Partial usage: nachos [-x programName]\n";
-	    cout << "Partial usage: nachos [-K] [-C] [-N]\n";
+        cout << "Partial usage: nachos [-K] [-C] [-N]\n";
 #ifndef FILESYS_STUB
             cout << "Partial usage: nachos [-cp UnixFile NachosFile]\n";
             cout << "Partial usage: nachos [-p fileName] [-r fileName]\n";
             cout << "Partial usage: nachos [-l] [-D]\n";
 #endif //FILESYS_STUB
-	}
+    }
 
     }
     debug = new Debug(debugArg);
@@ -269,7 +269,7 @@ main(int argc, char **argv)
 
     kernel->Initialize();
 
-    CallOnUserAbort(Cleanup);		// if user hits ctl-C
+    CallOnUserAbort(Cleanup);       // if user hits ctl-C
 
     // at this point, the kernel is ready to do something
     // run some tests, if requested

@@ -1,10 +1,11 @@
 // Client side C/C++ program to demonstrate Socket programming 
 
 #include "sender.h"
-#define PORT 55555 
+#define PORT 9094 
 //测试成功~
 int ParseAddress(char *address,char *filename){
     int nodeNumber=(int)address[0]-(int)'0';
+    printf("(int)1-(int)0=%d\n", (int)'1'- (int)'0');
     if (nodeNumber<0 || nodeNumber>9)
     {
         /* code */
@@ -27,6 +28,7 @@ int WriteTo(char *addressString, char *content){
         /* code */
         printf("File name Format wrong!\n");
     }
+
     struct sockaddr_in address; 
     int sock = 0, valread; 
     struct sockaddr_in serv_addr; 
@@ -85,6 +87,9 @@ int ReadFrom(char *addressString, char *content){
         /* code */
         printf("File name Format wrong!\n");
     }
+        printf("numberOfNode is %d\n", numberOfNode);
+        printf("Address String is %s\n", addressString);
+    printf("Reading from port %d...\n", PORT+numberOfNode);
     struct sockaddr_in address; 
     int sock = 0, valread; 
     struct sockaddr_in serv_addr; 

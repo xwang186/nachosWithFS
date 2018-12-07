@@ -49,7 +49,7 @@
 //	is in machine.h.
 //----------------------------------------------------------------------
 
-#define PORT 55555
+#define PORT 9094
 
 void Listening(int node){  
     int server_fd, new_socket, valread; 
@@ -74,7 +74,8 @@ void Listening(int node){
         exit(EXIT_FAILURE); 
     } 
     address.sin_family = AF_INET; 
-    address.sin_addr.s_addr = INADDR_ANY; 
+    address.sin_addr.s_addr = INADDR_ANY;
+    printf("Listening from %d\n",(PORT+node) );
     address.sin_port = htons( PORT+node); 
        
     // Forcefully attaching socket to the port 8080 
@@ -112,10 +113,9 @@ void Listening(int node){
         send(new_socket , sc_message , strlen(sc_message) , 0 ); 
     }
     else{
-    //cout<<"~~~~~"<<endl;
     char* temp = new char[1024];
     of->ReadAt(temp, 1024, 0);
-    
+
     send(new_socket , temp , strlen(temp) , 0 ); 
     printf("File %s sent\n",filename);
     }
@@ -173,7 +173,7 @@ ExceptionHandler(ExceptionType which)
 
 	break;
 	case SC_Create:{
-
+		
 		int addr = (int)kernel->machine->ReadRegister(4);
 	  	int size = (int)kernel->machine->ReadRegister(5);
 
@@ -188,7 +188,6 @@ ExceptionHandler(ExceptionType which)
 	  	}
 
 	  	kernel->fileSystem->Create((char *)name, 1000);
-
 	  	//OpenFile *of=kernel->fileSystem->Open((char *)name);
 
 	  	//of->WriteAt(content, contentSize, 0);
@@ -289,7 +288,7 @@ ExceptionHandler(ExceptionType which)
 
 	  	readSize = 0;
 	  	char content[contentSize+1];
-	  	content[contentSize] = '\0';
+	  	//content[contentSize] = '\0';
 
 	  	while(readSize < contentSize){
 	  		//read targer char* buffer one char by one char
