@@ -1,8 +1,6 @@
-// Client side C/C++ program to demonstrate Socket programming 
 
 #include "sender.h"
 #define PORT 9094 
-//测试成功~
 int ParseAddress(char *address,char *filename){
     int nodeNumber=(int)address[0]-(int)'0';
     printf("(int)1-(int)0=%d\n", (int)'1'- (int)'0');
@@ -31,30 +29,29 @@ int WriteTo(char *addressString, char *content){
 
     struct sockaddr_in address; 
     int sock = 0, valread; 
-    struct sockaddr_in serv_addr; 
+    struct sockaddr_in socketAddress; 
     
     char buffer[1024] = {0}; 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     { 
-        printf("\n Socket creation error \n"); 
+        printf("\n socket() function failes \n"); 
         return -1; 
     } 
    
-    memset(&serv_addr, '0', sizeof(serv_addr)); 
+    memset(&socketAddress, '0', sizeof(socketAddress)); 
    
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(PORT+numberOfNode); 
+    socketAddress.sin_family = AF_INET; 
+    socketAddress.sin_port = htons(PORT+numberOfNode); 
        
-    // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)  
+    if(inet_pton(AF_INET, "127.0.0.1", &socketAddress.sin_addr)<=0)  
     { 
-        printf("\nInvalid address/ Address not supported \n"); 
+        printf("\nUnable to find the ip address \n"); 
         return -1; 
     } 
    
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    if (connect(sock, (struct sockaddr *)&socketAddress, sizeof(socketAddress)) < 0) 
     { 
-        printf("\nConnection Failed \n"); 
+        printf("\nConnect() function fails \n"); 
         return -1; 
     }
     char *request=new char[100];
@@ -90,32 +87,31 @@ int ReadFrom(char *addressString, char *content){
         printf("numberOfNode is %d\n", numberOfNode);
         printf("Address String is %s\n", addressString);
     printf("Reading from port %d...\n", PORT+numberOfNode);
-    struct sockaddr_in address; 
+    struct sockaddr_inaddress ; 
     int sock = 0, valread; 
-    struct sockaddr_in serv_addr; 
+    struct sockaddr_in socketAddress; 
     
     char buffer[1024] = {0}; 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     { 
-        printf("\n Socket creation error \n"); 
+        printf("\n socket() function failes \n"); 
         return -1; 
     } 
    
-    memset(&serv_addr, '0', sizeof(serv_addr)); 
+    memset(&socketAddress, '0', sizeof(socketAddress)); 
    
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(PORT+numberOfNode); 
+    socketAddress.sin_family = AF_INET; 
+    socketAddress.sin_port = htons(PORT+numberOfNode); 
        
-    // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)  
+    if(inet_pton(AF_INET, "127.0.0.1", &socketAddress.sin_addr)<=0)  
     { 
-        printf("\nInvalid address/ Address not supported \n"); 
+        printf("\nUnable to find the ip address \n"); 
         return -1; 
     } 
    
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+    if (connect(sock, (struct sockaddr *)&socketAddress, sizeof(socketAddress)) < 0) 
     { 
-        printf("\nConnection Failed \n"); 
+        printf("\nConnect() function fails\n"); 
         return -1; 
     }
     char *hello=new char[9];
@@ -128,8 +124,8 @@ int ReadFrom(char *addressString, char *content){
     request[strlen(realFileName)+2]='\0';
     //hello= "1/wwww11/I am the new content of www111"; 
     send(sock , request , strlen(request) , 0 );
-    printf("Hello message sent\n"); 
-    valread = read( sock , content, 1024); 
+    printf("hello message sent\n"); 
+    valread = read( sock , content, 1024);
     printf("%s\n",content ); 
     return 0; 
 }
