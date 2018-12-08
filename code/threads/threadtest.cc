@@ -16,6 +16,7 @@ void test1(int which){
 
     cout<<"Test for maximum file size:"<<endl;
     char* t="test";
+
     kernel->fileSystem->Create(t,124000);
     OpenFile *test=kernel->fileSystem->Open((char *)t);
     test->WriteAt(input, 120000, 0);
@@ -37,10 +38,12 @@ void test2(int which){
     }
     input[119999] = '!';
 
-    cout<<"Test for extensible file size:"<<endl;
+    cout<<endl<<"Test for extensible file size:"<<endl;
     char* t="test";
+    cout<<"Create file with size 0"<<endl;
     kernel->fileSystem->Create(t,0);
     OpenFile *test=kernel->fileSystem->Open((char *)t);
+    cout<<"Write to file with bytes 120000"<<endl;
     test->WriteAt(input, 120000, 0);
     char* temp = new char[120000];
     test->ReadAt(temp, 120000, 0);
@@ -68,51 +71,53 @@ void test3(int which){
     char* u10="test10";
     char* u11="test11";
     char* u12="test12";
-    kernel->fileSystem->Create(u1,0);
+
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u1,1000);
     OpenFile *of1=kernel->fileSystem->Open((char *)u1);
     of1->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u2,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u2,1000);
     OpenFile *of2=kernel->fileSystem->Open((char *)u2);
     of2->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u3,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u3,1000);
     OpenFile *of3=kernel->fileSystem->Open((char *)u3);
     of3->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u4,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u4,1000);
     OpenFile *of4=kernel->fileSystem->Open((char *)u4);
     of4->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u5,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u5,1000);
     OpenFile *of5=kernel->fileSystem->Open((char *)u5);
     of5->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u6,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u6,1000);
     OpenFile *of6=kernel->fileSystem->Open((char *)u6);
     of6->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u7,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u7,1000);
     OpenFile *of7=kernel->fileSystem->Open((char *)u7);
     of7->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u8,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u8,1000);
     OpenFile *of8=kernel->fileSystem->Open((char *)u8);
     of8->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u9,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u9,1000);
     OpenFile *of9=kernel->fileSystem->Open((char *)u9);
     of9->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u10,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u10,1000);
     OpenFile *of10=kernel->fileSystem->Open((char *)u10);
     of10->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u11,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u11,1000);
     OpenFile *of11=kernel->fileSystem->Open((char *)u11);
     of11->WriteAt(input, 1000, 0);
-
-    kernel->fileSystem->Create(u12,0);
+    cout<<"Create file"<<endl;
+    kernel->fileSystem->Create(u12,1000);
     OpenFile *of12=kernel->fileSystem->Open((char *)u12);
     of12->WriteAt(input, 1000, 0);
     
@@ -129,6 +134,33 @@ void test3(int which){
     kernel->fileSystem->Remove((char *)u11);
     kernel->fileSystem->Remove((char *)u12);
 }
+
+void test4(int which){
+    char* input = new char[20000];
+    for(int i=0; i<20000; i++){
+        input[i] = 'a';
+        
+    }
+    input[19999] = '!';
+
+    cout<<"Test for extensible file size 2:"<<endl;
+    char* t="test";
+    cout<<"Create file with size 0"<<endl;
+    kernel->fileSystem->Create(t,0);
+    OpenFile *test=kernel->fileSystem->Open((char *)t);
+    cout<<"Write to file with bytes 1000"<<endl;
+    test->WriteAt(input, 1000, 0);
+    cout<<"Write to file with bytes 10000"<<endl;
+    test->WriteAt(input, 10000, 1000);
+    cout<<"Write to file with bytes 9000"<<endl;
+    test->WriteAt(input, 9000, 11000);
+    char* temp = new char[20000];
+    test->ReadAt(temp, 20000, 0);
+    printf("%s\n", temp);
+    kernel->fileSystem->Remove((char *)t);
+    cout<<endl<<endl<<endl;
+}
+
 void
 FileTest(int which){
     char* t="wwww";
@@ -290,5 +322,8 @@ ThreadTest(int i)
     }
     if(i == 6) {
         unsafe_TestForDelete();
+    }
+    if(i == 7) {
+        t->Fork((VoidFunctionPtr) test4, (void *) 1);
     }
 }
