@@ -184,6 +184,7 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
 
 // copy in the bytes we want to change 
     bcopy(from, &buf[position - (firstSector * SectorSize)], numBytes);
+    buf[position - (firstSector * SectorSize)+numBytes]='\0';
 
 // write modified sectors back
     for (i = firstSector; i <= lastSector; i++)	
