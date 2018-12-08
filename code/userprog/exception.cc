@@ -105,7 +105,7 @@ void Listening(int node){
     valread = read( new_socket , request, 1024); 
     type=TrasferString(request,filename,filecontent);
     printf("Request type: %c\n",type);
-    printf("Request type: %s filename Length:%d \n",filename ,strlen(filename));
+    printf("Request content: %s filename Length:%d \n",filename ,strlen(filename));
     OpenFile *of=kernel->fileSystem->Open(filename);
     if(type=='1'){   
         printf("%s\n", filecontent);
