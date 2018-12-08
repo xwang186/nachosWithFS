@@ -283,7 +283,7 @@ ThreadTest(int i)
         TestForMutex();
     }
     if(i == 4) {
-        unsafe_TestForDelete();
+        unsafe_TestForMutex();
     }
     if(i == 5) {
         TestForDelete();
