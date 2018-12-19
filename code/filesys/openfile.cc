@@ -149,11 +149,22 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
     bool firstAligned, lastAligned;
     char *buf;
 
-    if ((numBytes <= 0) || (position >= fileLength))
+    if (numBytes <= 0)
 	return 0;				// check request
-    if ((position + numBytes) > fileLength)
-	numBytes = fileLength - position;
-    DEBUG(dbgFile, "Writing " << numBytes << " bytes at " << position << " from file of length " << fileLength);
+
+    //call function to extend current file size
+    if(position + numBytes > fileLength){
+        if(kernel->fileSystem->extend(this, position+numBytes-fileLength+4000)){
+            fileLength = hdr->FileLength();
+            cout<<"Extend file size succeeds!\n"<<endl;
+        }
+        else cout<<"Extend file size fails!\n"<<endl;
+    }
+
+
+ //    if ((position + numBytes) > fileLength)
+	// numBytes = fileLength - position;
+ //    DEBUG(dbgFile, "Writing " << numBytes << " bytes at " << position << " from file of length " << fileLength);
 
     firstSector = divRoundDown(position, SectorSize);
     lastSector = divRoundDown(position + numBytes - 1, SectorSize);
@@ -173,6 +184,7 @@ OpenFile::WriteAt(char *from, int numBytes, int position)
 
 // copy in the bytes we want to change 
     bcopy(from, &buf[position - (firstSector * SectorSize)], numBytes);
+    buf[position - (firstSector * SectorSize)+numBytes]='\0';
 
 // write modified sectors back
     for (i = firstSector; i <= lastSector; i++)	

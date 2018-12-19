@@ -51,6 +51,8 @@
 #include "directory.h"
 #include "filehdr.h"
 #include "filesys.h"
+#include "main.h"
+#include "filemanager.h"
 
 // Sectors containing the file headers for the bitmap of free sectors,
 // and the directory of files.  These file headers are placed in well-known 
@@ -62,7 +64,8 @@
 // supports extensible files, the directory size sets the maximum number 
 // of files that can be loaded onto the disk.
 #define FreeMapFileSize 	(NumSectors / BitsInByte)
-#define NumDirEntries 		10
+#define NumDirEntries 		100 //we have implemented extensible files, so we can increase the maximum nubmer of files
+                                //in this case, we increase it to 100
 #define DirectoryFileSize 	(sizeof(DirectoryEntry) * NumDirEntries)
 
 //----------------------------------------------------------------------
@@ -204,6 +207,7 @@ FileSystem::Create(char *name, int initialSize)
     	    	hdr->WriteBack(sector); 		
     	    	directory->WriteBack(directoryFile);
     	    	freeMap->WriteBack(freeMapFile);
+                kernel->filemanager->AddNewFile(name);
 	    }
             delete hdr;
 	}
@@ -336,5 +340,18 @@ FileSystem::Print()
     delete freeMap;
     delete directory;
 } 
+
+bool FileSystem::extend(OpenFile *file, int numBytes){
+
+    PersistentBitmap *freeMap = new PersistentBitmap(freeMapFile,NumSectors);
+
+    FileHeader *fileHdr = file->hdr;
+
+    bool result = fileHdr->extendFileSize(freeMap, numBytes);
+
+    if(result) freeMap->WriteBack(freeMapFile);
+
+    return result;
+}
 
 #endif // FILESYS_STUB

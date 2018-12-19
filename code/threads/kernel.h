@@ -19,11 +19,15 @@
 #include "filesys.h"
 #include "machine.h"
 
+
+
+
 class PostOfficeInput;
 class PostOfficeOutput;
 class SynchConsoleInput;
 class SynchConsoleOutput;
 class SynchDisk;
+class FileManager;
 
 class Kernel {
   public:
@@ -52,10 +56,12 @@ class Kernel {
     Machine *machine;           // the simulated CPU
     SynchConsoleInput *synchConsoleIn;
     SynchConsoleOutput *synchConsoleOut;
+    FileManager *filemanager;
     SynchDisk *synchDisk;
     FileSystem *fileSystem;     
     PostOfficeInput *postOfficeIn;
     PostOfficeOutput *postOfficeOut;
+    
 
     int hostName;               // machine identifier
 

@@ -18,6 +18,61 @@
 
 #define UserStackSize		1024 	// increase this as necessary!
 
+class addrOpenFile {
+  public:
+    addrOpenFile(int f) { file = f; currentOffset = 0; }    // open the file
+    ~addrOpenFile() { Close(file); }            // close the file
+
+    int ReadAt(char *into, int numBytes, int position) { 
+            Lseek(file, position, 0); 
+        return ReadPartial(file, into, numBytes); 
+        }   
+    int WriteAt(char *from, int numBytes, int position) { 
+            Lseek(file, position, 0); 
+        WriteFile(file, from, numBytes); 
+        return numBytes;
+        }   
+    int Read(char *into, int numBytes) {
+        int numRead = ReadAt(into, numBytes, currentOffset); 
+        currentOffset += numRead;
+        return numRead;
+            }
+    int Write(char *from, int numBytes) {
+        int numWritten = WriteAt(from, numBytes, currentOffset); 
+        currentOffset += numWritten;
+        return numWritten;
+        }
+
+    int Length() { Lseek(file, 0, 2); return Tell(file); }
+    
+  private:
+    int file;
+    int currentOffset;
+};
+
+class addrFileSystem {
+  public:
+    addrFileSystem() {}
+
+    bool Create(char *name) {
+    int fileDescriptor = OpenForWrite(name);
+
+    if (fileDescriptor == -1) return FALSE;
+    Close(fileDescriptor); 
+    return TRUE; 
+    }
+
+    addrOpenFile* Open(char *name) {
+      int fileDescriptor = OpenForReadWrite(name, FALSE);
+
+      if (fileDescriptor == -1) return NULL;
+      return new addrOpenFile(fileDescriptor);
+      }
+
+    bool Remove(char *name) { return Unlink(name) == 0; }
+
+};
+
 class AddrSpace {
   public:
     AddrSpace();			// Create an address space.

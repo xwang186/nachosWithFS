@@ -19,6 +19,7 @@
 
 #include "openfile.h"
 
+#define increaseSize 10
 #define FileNameMaxLen 		9	// for simplicity, we assume 
 					// file names are <= 9 characters long
 
@@ -71,7 +72,9 @@ class Directory {
 					//  of the directory -- all the file
 					//  names and their contents.
 
-  private:
+    void expendDirectoryEntry(int size);
+
+  //private:
     int tableSize;			// Number of directory entries
     DirectoryEntry *table;		// Table of pairs: 
 					// <file name, file header location> 

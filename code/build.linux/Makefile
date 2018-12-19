@@ -191,7 +191,7 @@
 # of "-DSIM_FIX" to the DEFINES.  This should be enabled by default
 # and eventually will not require the symbol definition
 ################################################################
-DEFINES =  -DFILESYS_STUB -DRDATA -DSIM_FIX
+DEFINES = -DRDATA -DSIM_FIX
 
 
 #####################################################################
@@ -270,7 +270,8 @@ THREAD_H = ../threads/alarm.h\
 	../threads/switch.h\
 	../threads/synch.h\
 	../threads/synchlist.h\
-	../threads/thread.h
+	../threads/thread.h\
+	../threads/filemanager.h
 
 THREAD_C = ../threads/alarm.cc\
 	../threads/kernel.cc\
@@ -279,9 +280,10 @@ THREAD_C = ../threads/alarm.cc\
 	../threads/synch.cc\
 	../threads/synchlist.cc\
 	../threads/thread.cc\
-	../threads/threadtest.cc
+	../threads/threadtest.cc\
+	../threads/filemanager.cc
 
-THREAD_O = alarm.o kernel.o main.o scheduler.o synch.o thread.o threadtest.o
+THREAD_O = alarm.o kernel.o main.o scheduler.o synch.o thread.o threadtest.o filemanager.o
 
 USERPROG_H = ../userprog/addrspace.h\
 	../userprog/syscall.h\
@@ -310,11 +312,13 @@ FILESYS_C =../filesys/directory.cc\
 
 FILESYS_O =directory.o filehdr.o filesys.o pbitmap.o openfile.o synchdisk.o
 
-NETWORK_H = ../network/post.h
+NETWORK_H = ../network/post.h\
+			../network/sender.h
 
-NETWORK_C = ../network/post.cc
+NETWORK_C = ../network/post.cc\
+			../network/sender.cc
 
-NETWORK_O = post.o
+NETWORK_O = post.o sender.o
 
 ##################################################################
 #  You probably don't want to change anything below this point in

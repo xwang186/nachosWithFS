@@ -23,11 +23,44 @@
 // of liability and disclaimer of warranty provisions.
 
 #include "copyright.h"
-
 #include "filehdr.h"
 #include "debug.h"
 #include "synchdisk.h"
 #include "main.h"
+
+//-----------------------DoubleIndirectHeader---------------------------
+
+DoubleIndirectHeader::DoubleIndirectHeader(){
+    //initialize indirect header, we set all them to -1 because they are not assigned sector now
+    for(int i=0; i<sectorPerIndirect; i++){
+        sectorPointer[i] = -1;
+    }
+}
+//fecth doubly indirect header from sector
+void DoubleIndirectHeader::FetchFrom(int sector){
+    kernel->synchDisk->ReadSector(sector, (char *)this);
+}
+//store doubly indirect header to sector
+void DoubleIndirectHeader::WriteBack(int sector){
+    kernel->synchDisk->WriteSector(sector, (char *)this);
+}    
+
+//-----------------------IndirectHeader---------------------------------
+
+IndirectHeader::IndirectHeader(){
+    //initialize  sector array, we set all them to -1 because they are not assigned sector now
+    for(int i=0; i<sectorPerIndirect; i++){
+        sectorPointer[i] = -1;
+    }
+}
+//fecth indirect header from sector
+void IndirectHeader::FetchFrom(int sector){
+    kernel->synchDisk->ReadSector(sector, (char *)this);
+}   
+//store indirect header to sector
+void IndirectHeader::WriteBack(int sector){
+    kernel->synchDisk->WriteSector(sector, (char *)this);
+}     
 
 //----------------------------------------------------------------------
 // FileHeader::Allocate
@@ -47,13 +80,70 @@ FileHeader::Allocate(PersistentBitmap *freeMap, int fileSize)
     numSectors  = divRoundUp(fileSize, SectorSize);
     if (freeMap->NumClear() < numSectors)
 	return FALSE;		// not enough space
-
-    for (int i = 0; i < numSectors; i++) {
-	dataSectors[i] = freeMap->FindAndSet();
-	// since we checked that there was enough free space,
-	// we expect this to succeed
-	ASSERT(dataSectors[i] >= 0);
+    
+    //space of direct table is enough
+    if(numSectors < NumDirect){
+        cout<<"Allocated sector for direct table: "<<endl;
+        for (int i = 0; i < numSectors; i++) {
+    	dataSectors[i] = freeMap->FindAndSet();
+        cout<<dataSectors[i]<<", ";
+    	// since we checked that there was enough free space,
+    	// we expect this to succeed
+    	ASSERT(dataSectors[i] >= 0);
+        }
+        cout<<endl;
     }
+    else {
+        int allocatedSector = 0;//variable to track how many sector we allocated
+
+        //we first allocate all direct table
+        cout<<"Allocated sector for direct table: "<<endl;
+        for (int i = 0; i <NumDirect; i++) {
+            dataSectors[i] = freeMap->FindAndSet();
+            cout<<dataSectors[i]<<", ";
+            allocatedSector++;
+            // since we checked that there was enough free space,
+            // we expect this to succeed
+            ASSERT(dataSectors[i] >= 0);
+        }
+        cout<<endl;
+        //direct table is full, we need to use double indirect table to allocate more sector
+        if(allocatedSector < numSectors){
+            //allocate sector for storing doubly indirect header
+            DoubleIndirectHeader *doubleHeader = new DoubleIndirectHeader();
+            doublyIndirectSector = freeMap->FindAndSet();
+            cout<<"Allocated sector for doubly indirect table: "<<endl<<doublyIndirectSector<<endl;
+
+            //allocate indirect header
+            IndirectHeader *indirectHeader;
+            for(int i=0; i<sectorPerIndirect && allocatedSector<numSectors; i++){
+                indirectHeader = new IndirectHeader();
+                //if current indirect header is not used, then we allocate it by assign it a sector number
+                doubleHeader->sectorPointer[i] = freeMap->FindAndSet();
+
+                cout<<"Allocated sector for indirect table: "<<endl<<doubleHeader->sectorPointer[i]<<endl;
+
+                cout<<"Allocated sector: "<<endl;
+                //allocate sector to indirect table
+                for(int i=0; i<sectorPerIndirect && allocatedSector<numSectors; i++){
+                    //we allocate it by assign it a sector number
+                    indirectHeader->sectorPointer[i] = freeMap->FindAndSet();
+
+                    cout<<indirectHeader->sectorPointer[i]<<", ";
+                    allocatedSector++;
+                }
+                cout<<endl;
+                //write the indirect header back to sector
+                indirectHeader->WriteBack(doubleHeader->sectorPointer[i]);
+                delete indirectHeader;
+            }
+            cout<<endl;
+            //write the doubly indirect header back to sector
+            doubleHeader->WriteBack(doublyIndirectSector);
+            delete doubleHeader;
+        }
+    }
+
     return TRUE;
 }
 
@@ -67,9 +157,46 @@ FileHeader::Allocate(PersistentBitmap *freeMap, int fileSize)
 void 
 FileHeader::Deallocate(PersistentBitmap *freeMap)
 {
-    for (int i = 0; i < numSectors; i++) {
-	ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
-	freeMap->Clear((int) dataSectors[i]);
+    if(numSectors < NumDirect){
+        for (int i = 0; i < numSectors; i++) {
+    	//ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+    	freeMap->Clear((int) dataSectors[i]);
+        }
+    }
+    else {
+        //we first deallocate all direct table
+        for (int i = 0; i < NumDirect; i++) {
+            //ASSERT(freeMap->Test((int) dataSectors[i]));  // ought to be marked!
+            freeMap->Clear((int) dataSectors[i]);
+        }
+
+        //if doubly indirect header is also in use, we need to deallocate it as well
+        //because doubly indirect header is in use, which means indirect header is in use as well
+        //we first fetch all indirect header, and deallocate all their sector
+        //then we deallocate the doubly indirect header
+        DoubleIndirectHeader *doubleHeader = new DoubleIndirectHeader();
+        doubleHeader->FetchFrom(doublyIndirectSector);
+        IndirectHeader *indirectHeader;
+        for(int i=0; i<sectorPerIndirect; i++){
+            if(doubleHeader->sectorPointer[i] == -1) continue;
+            else {
+                indirectHeader = new IndirectHeader();
+                indirectHeader->FetchFrom(doubleHeader->sectorPointer[i]);
+                for(int i=0; i<sectorPerIndirect; i++){
+                    if(indirectHeader->sectorPointer[i] == -1) continue;
+                    else {
+                        freeMap->Clear(indirectHeader->sectorPointer[i]);
+                        indirectHeader->sectorPointer[i] = -1;
+                    }
+                }
+                freeMap->Clear(doubleHeader->sectorPointer[i]);
+                doubleHeader->sectorPointer[i] = -1;
+                delete indirectHeader;
+            }
+        }
+        freeMap->Clear(doublyIndirectSector);
+        doublyIndirectSector = 0;
+        delete doubleHeader;
     }
 }
 
@@ -111,8 +238,102 @@ FileHeader::WriteBack(int sector)
 
 int
 FileHeader::ByteToSector(int offset)
-{
-    return(dataSectors[offset / SectorSize]);
+{   
+    int sectorOffset = offset/SectorSize;
+    //if the offset is in the direct table, then we resture it immediately
+    if(sectorOffset < NumDirect) return(dataSectors[sectorOffset]); 
+    //otherwise, we need to compute its offset
+    else{
+
+        //fetch the doubly indirect header from disk
+        DoubleIndirectHeader *doubleHeader = new DoubleIndirectHeader();
+        doubleHeader->FetchFrom(doublyIndirectSector);
+
+        //fetch the indirect header from disk
+        IndirectHeader *indirectHeader = new IndirectHeader();
+        indirectHeader->FetchFrom(doubleHeader->sectorPointer[sectorOffset/sectorPerIndirect]);
+
+        //get the sector number
+        int result = indirectHeader->sectorPointer[sectorOffset%sectorPerIndirect]; 
+
+        delete indirectHeader;
+        delete doubleHeader;
+        //ASSERT(result >= 0);
+        return result;
+    }
+}
+
+bool FileHeader::extendFileSize(PersistentBitmap *freeMap, int fileSize){
+
+    int originalSize = FileLength();
+    int originalSector = divRoundUp(originalSize, SectorSize);
+    int extraSectors = divRoundUp(fileSize, SectorSize);
+
+    //there is no enough free sector
+    if (freeMap->NumClear() < extraSectors)
+        return FALSE;       // not enough space
+
+    //there is no enough sector
+    if(originalSector + extraSectors > NumSectors) 
+        return FALSE;
+
+    int allocatedSector = 0;
+    //allocate direct table first
+    if(originalSector < NumDirect){
+        cout<<"Allocated sector for direct table: "<<endl;
+        for(int i=0; i<NumDirect && i<extraSectors; i++){
+            dataSectors[i] = freeMap->FindAndSet();
+            allocatedSector++;
+            cout<<dataSectors[i]<<", ";
+            ASSERT(dataSectors[i] >= 0);
+        }
+    }
+
+    cout<<endl;
+
+    //direct table is full, allocate more sector by doubly indirect table
+    if(allocatedSector < extraSectors){
+        DoubleIndirectHeader *doubleHeader = new DoubleIndirectHeader();
+
+        //double indirect header is not allocated, allocate sector for it
+        if(doublyIndirectSector == -1) doublyIndirectSector = freeMap->FindAndSet();
+        //if the double indirect header is already in using, fetch it from disk
+        else doubleHeader->FetchFrom(doublyIndirectSector);
+        cout<<"Allocated/Fetch sector for doubly indirect table: "<<endl<<doublyIndirectSector<<endl;
+        //the rest is similar as function Allocation()
+        IndirectHeader *indirectHeader;
+        for(int i=0; i<sectorPerIndirect && allocatedSector<extraSectors; i++){
+            indirectHeader = new IndirectHeader();
+            //if we already allocate sector for the indirect header, then we just fetch it from sector
+            //otherwise, we allocate a sector for it
+            if(doubleHeader->sectorPointer[i] == -1) doubleHeader->sectorPointer[i] = freeMap->FindAndSet();
+            else indirectHeader->FetchFrom(doubleHeader->sectorPointer[i]);
+            cout<<"Allocated sector for indirect table: "<<endl<<doubleHeader->sectorPointer[i]<<endl;
+
+            cout<<"Allocated sector: "<<endl;
+            for(int i=0; i<sectorPerIndirect && allocatedSector<extraSectors; i++){
+                //if we already allocate a sector to the element of indirect header, then we move to next element
+                //otherwise, we allocate a sector to the element
+                if(indirectHeader->sectorPointer[i] == -1) indirectHeader->sectorPointer[i] = freeMap->FindAndSet();
+                else continue;
+                allocatedSector++;
+                cout<<indirectHeader->sectorPointer[i]<<", ";
+            }
+            cout<<endl;
+            indirectHeader->WriteBack(doubleHeader->sectorPointer[i]);
+            delete indirectHeader;
+        }
+        cout<<endl;
+        doubleHeader->WriteBack(doublyIndirectSector);
+        delete doubleHeader;
+    }
+
+    //after extension, we update file size and number of sector of current file
+    numBytes = numBytes + fileSize;
+    numSectors = numSectors + extraSectors;
+
+    return TRUE;
+
 }
 
 //----------------------------------------------------------------------

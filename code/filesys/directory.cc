@@ -74,7 +74,7 @@ Directory::FetchFrom(OpenFile *file)
 
 void
 Directory::WriteBack(OpenFile *file)
-{
+{   
     (void) file->WriteAt((char *)table, tableSize * sizeof(DirectoryEntry), 0);
 }
 
@@ -138,8 +138,35 @@ Directory::Add(char *name, int newSector)
             table[i].sector = newSector;
         return TRUE;
 	}
+
+    // expendDirectoryEntry(tableSize*increaseSize);
+
+    // for (int i = 0; i < tableSize; i++)
+    //     if (!table[i].inUse) {
+    //         table[i].inUse = TRUE;
+    //         strncpy(table[i].name, name, FileNameMaxLen); 
+    //         table[i].sector = newSector;
+    //     return TRUE;
+    // }
+
     return FALSE;	// no space.  Fix when we have extensible files.
 }
+
+
+// void Directory::expendDirectoryEntry(int size){
+
+//     DirectoryEntry *createdTable = new DirectoryEntry[size];
+
+//     for(int i=0; i<size; i++){
+//         if(i<tableSize) createdTable[i] = table[i];
+//         else createdTable[i].inUse = FALSE; 
+//     }
+
+//     delete[] table;
+//     table = createdTable;
+
+//     tableSize = size;
+// }
 
 //----------------------------------------------------------------------
 // Directory::Remove
