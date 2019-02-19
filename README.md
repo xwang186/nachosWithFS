@@ -19,7 +19,7 @@ Increase the maximum file size.
 In original Nachos file system, all files’ header are stored in one sector, and it only use direct header to allocate sector. This results that there are only 30 direct headers, so the maximum file size can only be 30*128 bytes, which is less than 4000 bytes. The disk size of Nachos is 128KB, so our goal is to make the maximum file size to be 128KB. In our design, we choose to use doubly indirectly header. The doubly indirectly header will points to 32 indirect headers, and every indirect header will point to 32 sectors; thus the maximum size of a file becomes 32*32*128 bytes, which is 128KB.
 	To achieve this design, we modify two files filehdr.h and filehdr.cc.
 
-	filehdr.h
+filehdr.h
 In this file we change the defined variables. We add “sectorPerIndirect” = 32, which means every indirect header points to 32 sectors. We add “sectorPerDoublyIndirect” = 32, which means doubly indirect header points to 32 indirect header. We add which means “NumDoublyIndirect” = 1,  there is only one doubly indirect header, and this is enough to reach the maximum file size of 128KB. We also change “NumDirect” to 29, originally there is 29 direct header, since we add one doubly indirect header, the direct header number becomes 29. As a result, the maximum file size now becomes (NumDirect*SectorSize + sectorPerIndirect*sectorPerDoublyIndirect*SectorSize) > 128KB. We also add two new class, DoubleIndirectHeader and IndirectHeader. Each of them has an size of 32 array (sectorPointer), and these array is used to store the sector number, so we can find the corresponding file/file header by them. Otherwise, they also have two functions, FetchFrom() and WriteBack(). They are same as the original function in the file header, we use them to write file header back or fetch file header from disk. Finally, we also add doublyIndirectSector in class FileHeader, this is used to store the sector number of doubly indirect header’s sector, so we can fetch it later quickly.
 
 fileHdr.cc
@@ -91,8 +91,6 @@ For local file read and write, Write function reads a part of char array and wri
 
  
 
-
-
 How to test our solution?
 
 Before testing:
@@ -103,22 +101,25 @@ Go to nachos/code/build.linux make
 Testing maximum file size, we run following command: ./nachos -K 0
 In this test case, the system will create a file with size 124000, then we write an input buffer with size 120000 to the file, and the we read content of the file and print it on the console.
 
-Testing extensible file size, we run following command: ./nachos -K 1
+Testing extensible file size, we run following command: 
+	./nachos -K 1
 In this test case, the system will create a file with size 0, then we write an input buffer with size 120000 to the file, so the system will extend the size of file and allocate more sectors to it. Then we read the content of the file and print it on the console.
 
-Testing extensible file size, we run following command: ./nachos -K 7
+Testing extensible file size, we run following command: 
+	./nachos -K 7
 In this test case, the system will create a file with size 0, then we create an input buffer with size 20000 to the file. We write the buffer into the files by three times. First time we write 1000 bytes. Second time we write 10000 bytes. Last time we write 9000 bytes. So every time we write to the file, the system will extend the size of the file.
 
-Testing more than 10 file in a directory, we run following command:  ./nachos -K 2
+Testing more than 10 file in a directory, we run following command:  
+	./nachos -K 2
 In this test case, the system will create 12 files, each has size of 1000. 
 
 After you test the basic file system, you should make clean to empty the whole disk.
 
 For synchronizations testing, we should make Read/Write operations atomic. However, if we write the synchronization directly into the ReadAt/WriteAt function, it will become hard to test if it succeeds. In a word, if we want to test if the synchronization system is making effect, we should run a confliction adding it manually and run again without the system.
- ./nachos -K 4: Two writing operations are conflict without synchronization and seriable system.
- ./nachos -K 3: Two writing operations are conflict with synchronization and seriable system.
-	 ./nachos -K 6: One delete operation and one write operation are conflict without synchronization and seriable system.
- ./nachos -K 5: One delete operation and one write operation are conflict without synchronization and seriable system.
+	 ./nachos -K 4: Two writing operations are conflict without synchronization and seriable system.
+	 ./nachos -K 3: Two writing operations are conflict with synchronization and seriable system.
+	./nachos -K 6: One delete operation and one write operation are conflict without synchronization and seriable system.
+	./nachos -K 5: One delete operation and one write operation are conflict without synchronization and seriable system.
 Besides, the synchronization system has added to the distributed system and will make effects automatically. Details are in the “exception.cc”--Listening(int node) function. Semaphore request and release are with all the write/read file operations.
 
 	Testing distributed system:
@@ -126,8 +127,8 @@ Besides, the synchronization system has added to the distributed system and will
 *Test2.c creates two files “File2_1” and “File2_2” and read the contents in the “File1” file in node 1 and print it. Then, it waits for other requests come. Let’s call it node 1.
 *Test3.c overwrites the file “File2_1”from node 1  with its own char arrays and then straightly read from that file and print it.
 In three different windows:(With the correct order)
-./nachos -x “../test/test1” -m 0
-./nachos -x “../test/test2” -m 1
-./nachos -x “../test/test3” -m 2
+	./nachos -x “../test/test1” -m 0
+	./nachos -x “../test/test2” -m 1
+	./nachos -x “../test/test3” -m 2
 
 Note: If the server can’t run with the error message “Address already used”, you should kill the process using that PORT.[currently it is 9094 - 9094+m, m is the numbers of the distributed nachos and has a maximum with 9]
