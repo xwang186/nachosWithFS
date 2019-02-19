@@ -12,9 +12,9 @@ In part two, we implements following things.
 3)We implement system calls like “ReadTo” “WriteTo” “Listening” to enable target request in the user programs.
 
 
-What has been developed
-	Basic File System:
+##What has been developed
 
+###Basic File System:
 Increase the maximum file size. 
 In original Nachos file system, all files’ header are stored in one sector, and it only use direct header to allocate sector. This results that there are only 30 direct headers, so the maximum file size can only be 30*128 bytes, which is less than 4000 bytes. The disk size of Nachos is 128KB, so our goal is to make the maximum file size to be 128KB. In our design, we choose to use doubly indirectly header. The doubly indirectly header will points to 32 indirect headers, and every indirect header will point to 32 sectors; thus the maximum size of a file becomes 32*32*128 bytes, which is 128KB.
 	To achieve this design, we modify two files filehdr.h and filehdr.cc.
@@ -30,7 +30,7 @@ Deallocate(), this is similar to the allocate. We first starts at direct sector,
 One more thing, because when we implement doubly indirect header and indirect header, we need to allocate sector for them (33 sectors, which is 4000+KB), so the maximum file size cannot be 128KB, the actually maximum size is around 124KB. 
 
 
-Implement extensible file size
+###Implement extensible file size
 In original Nachos, when we create a file, we must give the file size; once the file is allocated with this size, we cannot change it anymore. So we want to change such situation. When we write to a file if the file size is not enough to hold the writing bytes, the system will call function extend() to allocate more sector to the file and increase the file size. We make change in filesys.cc, openfile.cc, and filehdr.cc.
 filesys.cc
 We add new function extend() in this class. And this function will be called in WriteAt() of openFlie.cc, when the size of writing bytes is larger than the file size. And then this file will call extendFileSize() which is a function of filehdr.cc. And sector bitmap and writing bytes must be pass to this file. So extendFileSize() can allocate more sector to these writing bytes.
@@ -44,7 +44,7 @@ We add new function extendFileSize() to this class FileHeader. And the function 
 Moreover, because now we support extensible file size, we can increase the value of NumDirEntries, so the system can support more than 10 file in a directory. 
 
 
-Synchronizations of Read/Write/Delete:
+###Synchronizations of Read/Write/Delete:
 To achieve the synchronization control, we create a big table of all open-files to manage all the files. A file manager object is created to do these management. We set two semaphores for each open-file. One is a semaphore for the Read operation and one is for the Write operation. The main reason we need two seperate semaphores is that read and write should have different conflicts. Which means, when one Read is doing on a file, other Read operations are able to execute but Write operations should be blocked to wait for all readings on this file being down, while a Write operation can block other Write operations and all other Read operations.
 It is a classic Reader-Writer problem. One approach to achieve it is that a Write operation P() on both Read semaphore and Write semaphore and V() when it is finished, and a Read operation only P() on read semaphore only when it is the first Read on the current resource and V() only when it is the last Read operation on the target resource that will finish.
 filemanager.cc\filemanager.h
@@ -57,7 +57,7 @@ kernel.h/kernel.cc
 Create an object for file manager in kernel object and initialize it.
 
 
-Distributed File System:
+###Distributed File System:
 
 System calls
 To implement DFS, we add some system calls to the system. They are WriteTo(), ReadTo(), Create(), Print(), Read(), Write(), Listening(), Exit().
@@ -91,7 +91,7 @@ For local file read and write, Write function reads a part of char array and wri
 
  
 
-How to test our solution?
+##How to test our solution?
 
 Before testing:
 Go to nachos/test directory, make
@@ -102,25 +102,25 @@ Testing maximum file size, we run following command: ＜/br＞
 ./nachos -K 0
 In this test case, the system will create a file with size 124000, then we write an input buffer with size 120000 to the file, and the we read content of the file and print it on the console.
 
-Testing extensible file size, we run following command: ＜/br＞
-	./nachos -K 1
+Testing extensible file size, we run following command: 
+		./nachos -K 1
 In this test case, the system will create a file with size 0, then we write an input buffer with size 120000 to the file, so the system will extend the size of file and allocate more sectors to it. Then we read the content of the file and print it on the console.
 
-Testing extensible file size, we run following command: ＜/br＞
-	./nachos -K 7
+Testing extensible file size, we run following command: 
+		./nachos -K 7
 In this test case, the system will create a file with size 0, then we create an input buffer with size 20000 to the file. We write the buffer into the files by three times. First time we write 1000 bytes. Second time we write 10000 bytes. Last time we write 9000 bytes. So every time we write to the file, the system will extend the size of the file.
 
-Testing more than 10 file in a directory, we run following command:  ＜/br＞
+Testing more than 10 file in a directory, we run following command:  
 	./nachos -K 2
 In this test case, the system will create 12 files, each has size of 1000. 
 
 After you test the basic file system, you should make clean to empty the whole disk.
 
-For synchronizations testing, we should make Read/Write operations atomic. However, if we write the synchronization directly into the ReadAt/WriteAt function, it will become hard to test if it succeeds. In a word, if we want to test if the synchronization system is making effect, we should run a confliction adding it manually and run again without the system.＜/br＞
-	 ./nachos -K 4: Two writing operations are conflict without synchronization and seriable system.＜/br＞
-	 ./nachos -K 3: Two writing operations are conflict with synchronization and seriable system.＜/br＞
-	./nachos -K 6: One delete operation and one write operation are conflict without synchronization and seriable system.＜/br＞
-	./nachos -K 5: One delete operation and one write operation are conflict without synchronization and seriable system.＜/br＞
+For synchronizations testing, we should make Read/Write operations atomic. However, if we write the synchronization directly into the ReadAt/WriteAt function, it will become hard to test if it succeeds. In a word, if we want to test if the synchronization system is making effect, we should run a confliction adding it manually and run again without the system.
+		./nachos -K 4: Two writing operations are conflict without synchronization and seriable system.
+		./nachos -K 3: Two writing operations are conflict with synchronization and seriable system.
+		./nachos -K 6: One delete operation and one write operation are conflict without synchronization and seriable system.
+		./nachos -K 5: One delete operation and one write operation are conflict without synchronization and seriable system.
 Besides, the synchronization system has added to the distributed system and will make effects automatically. Details are in the “exception.cc”--Listening(int node) function. Semaphore request and release are with all the write/read file operations.
 
 Testing distributed system:
