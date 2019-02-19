@@ -98,37 +98,38 @@ Go to nachos/test directory, make
 Go to nachos/code/build.linux make depend
 Go to nachos/code/build.linux make
 
-Testing maximum file size, we run following command: ./nachos -K 0
+Testing maximum file size, we run following command: ＜/br＞
+./nachos -K 0
 In this test case, the system will create a file with size 124000, then we write an input buffer with size 120000 to the file, and the we read content of the file and print it on the console.
 
-Testing extensible file size, we run following command: 
+Testing extensible file size, we run following command: ＜/br＞
 	./nachos -K 1
 In this test case, the system will create a file with size 0, then we write an input buffer with size 120000 to the file, so the system will extend the size of file and allocate more sectors to it. Then we read the content of the file and print it on the console.
 
-Testing extensible file size, we run following command: 
+Testing extensible file size, we run following command: ＜/br＞
 	./nachos -K 7
 In this test case, the system will create a file with size 0, then we create an input buffer with size 20000 to the file. We write the buffer into the files by three times. First time we write 1000 bytes. Second time we write 10000 bytes. Last time we write 9000 bytes. So every time we write to the file, the system will extend the size of the file.
 
-Testing more than 10 file in a directory, we run following command:  
+Testing more than 10 file in a directory, we run following command:  ＜/br＞
 	./nachos -K 2
 In this test case, the system will create 12 files, each has size of 1000. 
 
 After you test the basic file system, you should make clean to empty the whole disk.
 
-For synchronizations testing, we should make Read/Write operations atomic. However, if we write the synchronization directly into the ReadAt/WriteAt function, it will become hard to test if it succeeds. In a word, if we want to test if the synchronization system is making effect, we should run a confliction adding it manually and run again without the system.
-	 ./nachos -K 4: Two writing operations are conflict without synchronization and seriable system.
-	 ./nachos -K 3: Two writing operations are conflict with synchronization and seriable system.
-	./nachos -K 6: One delete operation and one write operation are conflict without synchronization and seriable system.
-	./nachos -K 5: One delete operation and one write operation are conflict without synchronization and seriable system.
+For synchronizations testing, we should make Read/Write operations atomic. However, if we write the synchronization directly into the ReadAt/WriteAt function, it will become hard to test if it succeeds. In a word, if we want to test if the synchronization system is making effect, we should run a confliction adding it manually and run again without the system.＜/br＞
+	 ./nachos -K 4: Two writing operations are conflict without synchronization and seriable system.＜/br＞
+	 ./nachos -K 3: Two writing operations are conflict with synchronization and seriable system.＜/br＞
+	./nachos -K 6: One delete operation and one write operation are conflict without synchronization and seriable system.＜/br＞
+	./nachos -K 5: One delete operation and one write operation are conflict without synchronization and seriable system.＜/br＞
 Besides, the synchronization system has added to the distributed system and will make effects automatically. Details are in the “exception.cc”--Listening(int node) function. Semaphore request and release are with all the write/read file operations.
 
-	Testing distributed system:
+Testing distributed system:
 *Test1.c creates two files “File1” and “File2" and waits for other requests come. Lets call it node 0.
 *Test2.c creates two files “File2_1” and “File2_2” and read the contents in the “File1” file in node 1 and print it. Then, it waits for other requests come. Let’s call it node 1.
 *Test3.c overwrites the file “File2_1”from node 1  with its own char arrays and then straightly read from that file and print it.
-In three different windows:(With the correct order)
-	./nachos -x “../test/test1” -m 0
-	./nachos -x “../test/test2” -m 1
-	./nachos -x “../test/test3” -m 2
+In three different windows:(With the correct order)＜/br＞
+	./nachos -x “../test/test1” -m 0＜/br＞
+	./nachos -x “../test/test2” -m 1＜/br＞
+	./nachos -x “../test/test3” -m 2＜/br＞
 
 Note: If the server can’t run with the error message “Address already used”, you should kill the process using that PORT.[currently it is 9094 - 9094+m, m is the numbers of the distributed nachos and has a maximum with 9]
